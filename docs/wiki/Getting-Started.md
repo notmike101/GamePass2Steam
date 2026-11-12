@@ -10,7 +10,7 @@ Use Windows 10/11 x64, the desktop Steam client and a game installed and registe
 2. Extract **all files** into a permanent folder, such as `%LOCALAPPDATA%\Programs\GamePass2Steam`. Do not launch inside the ZIP. Keep the executable and runtime files together.
 3. Run `GamePass2Steam.exe`. Select your intended Steam profile. Numeric profile IDs correspond to Steam's `userdata` folders; check the selection if you have multiple accounts.
 4. Check the games in the **Add** column. Search by name if needed. **Include other registered apps** expands the list when game metadata is incomplete. **Find game folder** matches a game directory or its Content folder to an existing Windows registration; it does not register loose executables.
-5. Choose **Steam > Exit** in Steam. Closing its window alone usually leaves Steam running.
+5. Choose **Steam > Exit**, or leave Steam running and accept the GUI's one-time offer to close and reopen it when you click **Add / update selected**. Save game progress first: games and downloads may be interrupted. No/Cancel makes no changes. This is asked for each import and is not a saved preference.
 6. Click **Add / update selected**, then reopen Steam. Your entries appear as non-Steam games.
 7. Select a game in Steam and click **Play**. Complete any Xbox/Windows account prompts yourself.
 

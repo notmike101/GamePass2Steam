@@ -15,6 +15,7 @@ public sealed class MainForm : Form
     private List<Game> games = [];
     private string steam = "";
     private bool busy;
+    private CancellationTokenSource? importCancellation;
 
     public MainForm()
     {
@@ -39,6 +40,7 @@ public sealed class MainForm : Form
         layout.Controls.Add(actions); layout.Controls.Add(status); Controls.Add(layout);
         search.TextChanged += (_, _) => Populate(); allApps.CheckedChanged += (_, _) => Populate(); profiles.SelectedIndexChanged += (_, _) => { if (!busy) TryPopulate(); };
         Shown += async (_, _) => await Execute(Initialize);
+        FormClosing += (_, e) => { if (importCancellation != null) { e.Cancel = true; importCancellation.Cancel(); status.Text = "Import canceled. Waiting for Steam shutdown recovery before closing this operation."; } };
     }
     private void AddButton(string text, Func<Task> action)
     {
@@ -83,15 +85,46 @@ public sealed class MainForm : Form
             int row = grid.Rows.Add(selected.Contains(game.Id), game.Name, game.Kind, managed.ContainsKey(game.Id) ? "Managed" : "Not added", game.InstallPath); grid.Rows[row].Tag = game;
         }
     }
-    private Task Mutate(bool remove)
+    private async Task Mutate(bool remove)
     {
         grid.EndEdit();
         var selected = grid.Rows.Cast<DataGridViewRow>().Where(r => r.Cells[0].Value is true).Select(r => (Game)r.Tag!).ToList();
         if (selected.Count == 0) throw new IOException("Check at least one game in the Add column.");
         if (!remove && selected.Any(g => g.Executables.Count == 0)) throw new IOException("A selected game is no longer installed. Repair it in Xbox, or remove its managed Steam entry.");
-        string? backup = Store().Apply(selected, Environment.ProcessPath!, remove); Populate();
+        var store = Store();
+        string? backup = null;
+        bool restart = !remove && Discovery.SteamRunning();
+        if (restart)
+        {
+            if (MessageBox.Show(this, "Steam is running. Close it normally, import these games, then reopen it?\n\nThis may interrupt games or downloads. Save your work first. This choice applies only to this import.\n\nChoose No or Cancel to leave Steam and shortcuts unchanged and exit Steam manually.", "Close and reopen Steam for this import?", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+            { status.Text = "Nothing was imported. Exit Steam using Steam > Exit, then retry when ready."; return; }
+            using var cancellation = new CancellationTokenSource();
+            importCancellation = cancellation;
+            using var waiting = new Form { Text = "Waiting for Steam", Size = new Size(520, 210), StartPosition = FormStartPosition.CenterParent, MinimizeBox = false, MaximizeBox = false };
+            var message = new Label { Text = "Waiting up to 60 seconds for Steam to close normally…", Dock = DockStyle.Fill, Padding = new Padding(16) };
+            var cancel = new Button { Text = "Cancel import", Dock = DockStyle.Bottom, Height = 40 };
+            bool complete = false;
+            void Cancel() { cancellation.Cancel(); cancel.Enabled = false; message.Text = "Import canceled. Waiting for Steam to finish closing so it can be reopened. No shortcuts will be changed."; }
+            cancel.Click += (_, _) => Cancel();
+            waiting.FormClosing += (_, e) => { if (!complete) { e.Cancel = true; Cancel(); } };
+            waiting.Controls.Add(message); waiting.Controls.Add(cancel); waiting.Show(this);
+            void StartSteam(bool shutdown)
+            {
+                var start = new ProcessStartInfo(Path.Combine(steam, "steam.exe")) { UseShellExecute = false };
+                if (shutdown) start.ArgumentList.Add("-shutdown");
+                using var process = Process.Start(start) ?? throw new IOException("Could not start the Steam client.");
+            }
+            try
+            {
+                await SteamImport.Run(true, Discovery.SteamRunning, () => StartSteam(true), () => StartSteam(false),
+                    () => backup = store.Apply(selected, Environment.ProcessPath!, false), cancellation.Token);
+            }
+            catch (OperationCanceledException) { status.Text = "Import canceled. No shortcuts were changed. Steam was reopened if shutdown completed."; return; }
+            finally { complete = true; importCancellation = null; waiting.Close(); }
+        }
+        else backup = store.Apply(selected, Environment.ProcessPath!, remove);
+        Populate();
         status.Text = (remove ? "Removed selected managed shortcuts. Installed games are untouched. " : "Steam shortcuts are ready. Open Steam and select Play. ") + (backup == null ? "No file changes were needed." : "Backup: " + backup);
-        return Task.CompletedTask;
     }
     private Task FindFolder()
     {
