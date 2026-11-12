@@ -47,6 +47,20 @@ Check("reject unsafe identity and command line input", () => {
     Throws(()=>SteamShortcuts.Update(BinaryVdf.Read(fixture),[game with { Id="bad\" --evil" }],launcher,false));
     Throws(()=>SteamShortcuts.Update(BinaryVdf.Read(fixture),[game],"bad\"path",false));
 });
+Check("reject ambiguous ownership tags and duplicate entry indexes", () => {
+    var root=BinaryVdf.Read(fixture);
+    SteamShortcuts.Update(root,[game],launcher,false);
+    root[0].Children![1].Children!.Single(n=>n.Name=="tags").Children!.Add(VdfNode.String("1", "GamePass2Steam:Other.Game_abcd!Play"));
+    Throws(()=>SteamShortcuts.Update(root,[game],launcher,true));
+    root=BinaryVdf.Read(fixture); root[0].Children!.Add(root[0].Children![0]);
+    Throws(()=>SteamShortcuts.Update(root,[game],launcher,false));
+});
+Check("UWP lifetime requires a visible game window and ignores suspended remnants", () => {
+    Assert(!SessionTracker.IsRunning("UWP", true, false));
+    Assert(SessionTracker.IsRunning("UWP", true, true));
+    Assert(!SessionTracker.IsRunning("UWP", false, true));
+    Assert(SessionTracker.IsRunning("GDK / packaged Win32", true, false));
+});
 Check("atomic update backup restore and running Steam refusal", () => {
     string dir=Path.Combine(Path.GetTempPath(),"gp2s-tests-"+Guid.NewGuid()); Directory.CreateDirectory(dir);
     try {
@@ -88,3 +102,12 @@ Check("session waits for real game, follows handoff, exits and bounds failure", 
     Assert(new SessionTracker().Observe(TimeSpan.FromSeconds(121),false)==SessionState.Failed);
 });
 Console.WriteLine($"{passed} checks passed");
+if (args is ["--compare", var beforePath, var afterPath, var expectedId])
+{
+    var before = SteamShortcuts.Entries(BinaryVdf.Read(File.ReadAllBytes(beforePath)));
+    var after = SteamShortcuts.Entries(BinaryVdf.Read(File.ReadAllBytes(afterPath)));
+    Assert(after.Count == before.Count + 1);
+    Assert(after.Count(e => SteamShortcuts.ManagedId(e) == expectedId) == 1);
+    Assert(BinaryVdf.Write(before).SequenceEqual(BinaryVdf.Write(after.Where(e => SteamShortcuts.ManagedId(e) != expectedId).ToList())));
+    Console.WriteLine($"INTEGRATION: preserved {before.Count} existing entries byte-for-byte; exactly one new managed entry.");
+}

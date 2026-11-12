@@ -2,7 +2,7 @@
 
 GamePass2Steam is MIT licensed; see LICENSE. It is not affiliated with Microsoft, Xbox or Valve. Product names belong to their owners.
 
-The portable release bundles the Microsoft .NET runtime and Windows Desktop runtime, distributed under their accompanying license and third-party notices in the release folder. See https://github.com/dotnet/runtime/blob/main/LICENSE.TXT and https://github.com/dotnet/runtime/blob/main/THIRD-PARTY-NOTICES.TXT. No external NuGet libraries are used by the product.
+The portable release bundles the Microsoft .NET runtime and Windows Desktop runtime. Their license and third-party notices are included in `licenses/`, retrieved from the .NET 10 upstream repositories. See https://github.com/dotnet/runtime/blob/main/LICENSE.TXT and https://github.com/dotnet/runtime/blob/main/THIRD-PARTY-NOTICES.TXT. No external NuGet libraries are used by the product.
 
 UWPHook was reviewed as a reference, not vendored. Acknowledgement and its upstream license follow:
 

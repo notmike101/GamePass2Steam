@@ -37,7 +37,14 @@ internal static class Program
         catch (Exception e)
         {
             Log.Write(e.ToString());
-            if (args.Length == 0 || args[0] == "--launch") MessageBox.Show(e.Message + "\n\nLogs: " + Log.DirectoryPath, "GamePass2Steam", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (args.Length == 0) MessageBox.Show(e.Message + "\n\nLogs: " + Log.DirectoryPath, "GamePass2Steam", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            else if (args[0] == "--launch")
+            {
+                using var error = new Form { Text = "GamePass2Steam — launch failed", Size = new Size(600, 260), StartPosition = FormStartPosition.CenterScreen };
+                error.Controls.Add(new TextBox { Multiline = true, ReadOnly = true, Dock = DockStyle.Fill, Text = e.Message + "\r\n\r\nLogs: " + Log.DirectoryPath + "\r\n\r\nThis error window closes automatically in 30 seconds." });
+                using var timer = new System.Windows.Forms.Timer { Interval = 30000 };
+                timer.Tick += (_, _) => error.Close(); timer.Start(); Application.Run(error);
+            }
             if (args.Contains("--output")) { int i = Array.IndexOf(args, "--output"); if (i + 1 < args.Length) File.WriteAllText(args[i + 1], JsonSerializer.Serialize(new { Error = e.Message })); }
             Console.Error.WriteLine(e.Message); return 1;
         }

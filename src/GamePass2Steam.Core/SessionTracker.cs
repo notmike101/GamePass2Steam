@@ -4,6 +4,7 @@ public enum SessionState { Starting, Running, Exited, Failed }
 
 public sealed class SessionTracker
 {
+    public static bool IsRunning(string kind, bool matchingProcess, bool visibleWindow) => matchingProcess && (kind != "UWP" || visibleWindow);
     private bool seen;
     private TimeSpan? absentSince;
     public SessionState Observe(TimeSpan elapsed, bool gameRunning)

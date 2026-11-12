@@ -9,10 +9,13 @@ public static class SteamShortcuts
     {
         if (root.Count != 1 || root[0].Name != "shortcuts" || root[0].Type != 0) throw new InvalidDataException("Expected one shortcuts object.");
         var entries = root[0].Children!;
+        if (entries.GroupBy(e => e.Name).Any(g => g.Count() > 1)) throw new InvalidDataException("Duplicate shortcut entry indexes.");
         foreach (var entry in entries)
         {
             if (entry.Type != 0 || !uint.TryParse(entry.Name, out _) || entry.Children!.GroupBy(n => n.Name, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1)) throw new InvalidDataException("Malformed or ambiguous shortcut entry.");
             if (entry.Children!.Any(n => n.Name.Equals("tags", StringComparison.OrdinalIgnoreCase) && n.Type != 0)) throw new InvalidDataException("Invalid shortcut tags.");
+            var tags = entry.Children!.FirstOrDefault(n => n.Name.Equals("tags", StringComparison.OrdinalIgnoreCase))?.Children;
+            if (tags?.Count(n => n.Type == 1 && Encoding.UTF8.GetString(n.Data!).StartsWith(Marker, StringComparison.Ordinal)) > 1) throw new InvalidDataException("Ambiguous GamePass2Steam ownership tags.");
         }
         return entries;
     }

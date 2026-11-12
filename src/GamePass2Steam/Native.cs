@@ -23,6 +23,22 @@ internal static class Native
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern bool QueryFullProcessImageName(SafeProcessHandle process, uint flags, StringBuilder path, ref uint size);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern int GetPackageFamilyName(SafeProcessHandle process, ref uint size, StringBuilder name);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern uint GetFinalPathNameByHandle(SafeFileHandle file, StringBuilder path, uint size, uint flags);
+    private delegate bool WindowCallback(IntPtr window, IntPtr state);
+    [DllImport("user32.dll")] private static extern bool EnumWindows(WindowCallback callback, IntPtr state);
+    [DllImport("user32.dll")] private static extern bool EnumChildWindows(IntPtr parent, WindowCallback callback, IntPtr state);
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr window);
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+    private static HashSet<int> VisibleProcesses()
+    {
+        HashSet<int> ids = [];
+        bool Collect(IntPtr window, IntPtr state)
+        {
+            if (IsWindowVisible(window)) { GetWindowThreadProcessId(window, out uint id); ids.Add((int)id); }
+            return true;
+        }
+        EnumWindows((window, state) => { if (IsWindowVisible(window)) { Collect(window, state); EnumChildWindows(window, Collect, IntPtr.Zero); } return true; }, IntPtr.Zero);
+        return ids;
+    }
     public static string CanonicalPath(string path)
     {
         try
@@ -42,6 +58,7 @@ internal static class Native
     public static List<int> GameProcesses(Game game)
     {
         List<int> matches = [];
+        var visible = game.Kind == "UWP" ? VisibleProcesses() : [];
         foreach (var process in Process.GetProcesses())
         {
             using (process)
@@ -60,7 +77,7 @@ internal static class Native
                     exact = GetPackageFamilyName(handle, ref count, family) == 0 && family.ToString() == game.Family;
                     if (!exact) exact = game.Executables.Contains(CanonicalPath(value), StringComparer.OrdinalIgnoreCase);
                 }
-                if (exact) matches.Add(process.Id);
+                if (SessionTracker.IsRunning(game.Kind, exact, visible.Contains(process.Id))) matches.Add(process.Id);
             }
         }
         return matches;

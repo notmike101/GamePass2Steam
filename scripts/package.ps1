@@ -10,6 +10,7 @@ dotnet publish (Join-Path $repo 'src/GamePass2Steam') -c Release -r win-x64 --se
 if ($LASTEXITCODE -ne 0) { throw 'Publish failed' }
 foreach ($name in @('README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md')) { Copy-Item -LiteralPath (Join-Path $repo $name) -Destination $stage }
 Copy-Item -LiteralPath (Join-Path $repo 'docs') -Destination (Join-Path $stage 'docs') -Recurse
+Copy-Item -LiteralPath (Join-Path $repo 'licenses') -Destination (Join-Path $stage 'licenses') -Recurse
 $archive = Join-Path $output 'GamePass2Steam-0.1.0-win-x64.zip'
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive -Force
 $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
