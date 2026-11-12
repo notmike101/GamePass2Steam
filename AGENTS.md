@@ -10,7 +10,7 @@ GamePass2Steam is a C# Windows Forms application that adds registered Xbox/Micro
 - `src/GamePass2Steam/`: GUI and command-line entry points, Windows package discovery, application activation, and process/window inspection. `Discover.ps1` is embedded in the application.
 - `tests/GamePass2Steam.Tests/`: a console-based test runner for the core library. Run it with `dotnet run`; it is not a `dotnet test` project.
 - `scripts/package.ps1`: runs tests, publishes the Windows x64 app with its .NET runtime, and creates a ZIP and checksum under `dist/`.
-- `.github/workflows/windows.yml`: CI build, packaged discovery check, and release publication.
+- `.github/workflows/windows.yml`: build-only CI for branches and PRs; `.github/workflows/release.yml`: releases after a reviewed `dev` to `main` merge.
 
 ## Development commands
 
@@ -60,6 +60,18 @@ Update `README.md` and relevant `docs/wiki/` pages when user-facing behavior cha
 
 The GitHub wiki is published separately from the application repository. Include wiki changes in `docs/wiki/` so they can be reviewed with the code; maintainers synchronize those files to the wiki repository. The application workflow does not publish wiki pages.
 
-The release version is `<Version>` in `src/GamePass2Steam/GamePass2Steam.csproj`. Successful builds on `main` update the rolling `main-build` prerelease and create `v<Version>` if that release does not already exist. Pull request builds do not publish. Coordinate version bumps with the release being prepared; the pipeline leaves existing versioned release assets unchanged. Preserve the bundled license notices when changing dependencies or packaging.
+Create feature branches from `dev` and target feature PRs at `dev`. Keep each issue focused and document PR dependencies. Do not merge PRs without maintainer review. Promote reviewed work through a same-repository `dev` to `main` PR.
+
+Only a merged `dev` to `main` PR triggers `.github/workflows/release.yml`. It automatically increments the patch version above the project version and existing stable version tags, packages and smoke-tests that exact merge plus its version-only commit, then atomically pushes the version and retry tags before publishing. The bumped project version is stored in the tagged release commit; `main` and `dev` keep their development baseline version. The publisher never pushes to protected branches. Direct pushes and manual CI runs cannot publish. `main-build` is retired. Do not manually bump the patch version for ordinary feature PRs.
+
+Finish one release promotion before merging another. The workflow fails safely if `main` advances before release preparation; it never force-pushes or silently includes unrelated later changes. Re-running the original merged-PR workflow resumes its recorded version after a publishing failure instead of bumping again. Keep the `dev-release-pr-*` marker tags, which make retries idempotent. No branch-protection bypass or extra credential is needed for releases. The release tags retain the version commit; subsequent releases increment above existing stable tags even when the development baseline is older.
+
+When changing release scripts or workflows, run `./scripts/test-release.ps1`, `./scripts/package.ps1`, and `./scripts/test-package.ps1`. The release checks exercise the eligibility policy and version calculation without publishing. Preserve bundled license notices and immutable published assets.
 
 In the change description, explain the problem, the resulting behavior, and the checks performed. Call out compatibility or data-format changes and any validation that could not be completed.
+
+## Enforced branch rules
+
+`dev` and `main` require a pull request, one approving review, resolved review threads, current branch contents, and successful GitHub Actions `build` and `Branch policy` checks. New commits dismiss stale approvals. Force pushes and branch deletion are blocked. The branch-policy workflow runs trusted base-branch code and permits only same-repository `dev` PRs into `main`; it never checks out PR code.
+
+There are no contributor, administrator, or automation bypass actors. A PR author cannot approve their own PR, so use a bot-authored promotion PR for the repository owner to review, or obtain another eligible collaborator's approval. Update feature branches from `dev` when GitHub marks them behind; retain dependency notes and wait for fresh checks. Ruleset snapshots are in `.github/rulesets/`; changing those files alone does not update GitHub settings.
