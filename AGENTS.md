@@ -1,66 +1,65 @@
-# Contributing to GamePass2Steam
+# Contributor guide
 
-GamePass2Steam is a Windows x64 desktop app that discovers registered Xbox/Store games, creates non-Steam shortcuts, and keeps its launcher alive for the real game session. Keep changes small and dependency-free where practical. Do not delegate to subagents unless the user explicitly requests it.
+These instructions apply to changes throughout this repository, whether made by a person or a coding assistant.
 
-## Repository map
+## Project structure
 
-- `src/GamePass2Steam.Core`: binary VDF parsing, managed shortcut identity, safe file replacement and session state. Keep this layer independent of Windows UI.
-- `src/GamePass2Steam`: WinForms GUI, CLI entry points, embedded PowerShell discovery, Windows activation and process tracking.
-- `tests/GamePass2Steam.Tests`: standalone assertion-based test executable; no test framework dependency. Tests use temporary profiles.
-- `scripts/package.ps1`: tests, self-contained Windows publish, documentation/licenses, ZIP and SHA-256. Version comes from the app project file.
-- `.github/workflows/windows.yml`: Windows build, packaged smoke test, artifact upload and releases.
-- `docs/VERIFICATION.md`: measured acceptance evidence and explicit limitations. `docs/RESEARCH.md` explains design decisions.
-- `docs/wiki`: source for the separately hosted GitHub wiki. `docs/images` contains real GUI captures used by the README.
+GamePass2Steam is a C# Windows Forms application that adds registered Xbox/Microsoft Store applications to Steam as non-Steam shortcuts. Its launcher activates the registered application and tracks the game session so Steam can track the launcher lifetime.
 
-## Build and verify
+- `src/GamePass2Steam.Core/`: binary VDF serialization, shortcut updates and file storage, game metadata parsing, and session state. Keep platform-independent logic here.
+- `src/GamePass2Steam/`: GUI and command-line entry points, Windows package discovery, application activation, and process/window inspection. `Discover.ps1` is embedded in the application.
+- `tests/GamePass2Steam.Tests/`: a console-based test runner for the core library. Run it with `dotnet run`; it is not a `dotnet test` project.
+- `scripts/package.ps1`: runs tests, publishes the Windows x64 app with its .NET runtime, and creates a ZIP and checksum under `dist/`.
+- `.github/workflows/windows.yml`: CI build, packaged discovery check, and release publication.
 
-Use Windows x64 and the .NET 10 SDK. From the repository root:
+## Development commands
+
+Use Windows x64 with the .NET 10 SDK for application development and integration testing. Run these commands from the repository root in PowerShell:
 
 ```powershell
+# Build the application
 dotnet build src/GamePass2Steam -c Release
+
+# Run the automated checks
 dotnet run --project tests/GamePass2Steam.Tests -c Release
+
+# Start the development GUI
+dotnet run --project src/GamePass2Steam
+
+# Build the portable distribution, including tests
 ./scripts/package.ps1
 ```
 
-Run the checks relevant to the change. New nontrivial behavior needs a focused assertion or regression test. Packaging changes must produce a usable ZIP with licenses and a matching checksum. Smoke-test the extracted EXE with `--discover --output <file>` in a path containing spaces and Unicode. Use `Start-Process -Wait -PassThru` for CLI checks because the EXE is a Windows GUI application. Check its exit code and JSON output.
+`Directory.Build.props` enables nullable reference checking, implicit usings, deterministic builds, and warnings as errors. Follow the surrounding C# conventions and keep changes focused. Explain any new dependency and its packaging or licensing implications.
 
-Do not import into a real Steam profile from `dotnet run`: it would save a development executable path. Use the installed portable EXE for authorized integration work. Never modify a real profile simply to run an automated test.
+## Behavior to preserve
 
-## Safety and compatibility invariants
+- Identify managed shortcuts by their `GamePass2Steam:` ownership tag, not their display name. Preserve unrelated shortcuts and existing user metadata; repeated imports should update the launch configuration without adding duplicates.
+- Reject malformed or ambiguous shortcut data before writing. Preserve backup creation, atomic replacement, concurrent-change detection, and refusal to write while Steam is running. Restore operates on the entire shortcut snapshot.
+- Discover and launch through the current Windows application registration. Do not hardcode game installation paths, package versions, or a particular Steam profile.
+- Track the actual game rather than only its bootstrapper. Keep startup and failure handling bounded, and allow for process handoff before deciding a session ended.
+- Do not force-close Steam, change game files or saves, bypass licensing, or require changes to WindowsApps permissions as part of importing or launching a game.
 
-- Preserve unrelated VDF entries, unknown supported fields, existing appids and user metadata. Match ownership with the stable `GamePass2Steam:` tag, never display-name guesses.
-- Reject malformed/unsupported/ambiguous input without overwriting it. Keep atomic replacement, backups, concurrent-change detection and both Steam-running checks.
-- Never force-close Steam, bypass licenses, change WindowsApps permissions, or alter games or saves. Restore replaces the whole shortcut snapshot; document that consequence.
-- Resolve the registered AUMID at launch; never hardcode a particular game, drive, package version or developer path.
-- Follow the real game executable through bootstrapper handoff. Preserve bounded startup/failure behavior and exit debounce. A bootstrapper PID alone is not a successful game session.
-- A live test must check Steam's Running/Stop state and Friends presence while the game is open, then ordinary game exit, launcher exit and Steam returning to Play/Online. Keep launch/presence, gameplay, Overlay, Input and Remote Play claims separate.
-- Record exactly what was observed. CI discovery cannot validate a licensed game. Do not claim UWP or another title works based only on a GDK title.
-- Logs can contain paths and application identity. Review screenshots and logs before publishing; keep private acceptance captures in ignored `.local`, not public documentation.
+## Validating a change
+
+Choose checks based on the affected behavior:
+
+- **Core logic:** run the console test project and add focused regression cases for changed parsing, shortcut handling, metadata, or session behavior. Use fixtures and temporary directories, not a contributor's Steam configuration.
+- **GUI:** build and exercise the affected controls, including error states and keyboard access.
+- **Discovery or launcher:** test on Windows with a relevant installed game when available. Record the game and installation type, launch result, Steam's running status/presence, and behavior after normal game exit. If that environment is unavailable, state what remains unverified.
+- **Packaging or CI:** run the packaging script and check the extracted app, bundled runtime/license files, and checksum. The workflow includes a discovery smoke test from a path containing spaces and Unicode.
+- **Documentation only:** check accuracy against the owning code/configuration and verify links. A live game test is not needed.
+
+For real Steam imports, use a packaged EXE in a stable folder: the shortcut stores the importer's executable path, so a development build can leave shortcuts pointing into build output. Back up any profile used for manual testing and close Steam before editing shortcuts. For scripted CLI checks, use `Start-Process -Wait -PassThru` and inspect the exit code and `--output` JSON; the application is a Windows GUI executable.
+
+Successful discovery or activation does not establish gameplay, Steam Overlay, Steam Input, or Remote Play compatibility. Describe only the behavior actually checked. Review logs and screenshots for personal information before publishing them.
 
 ## Documentation and releases
 
-Update README and relevant wiki sources when user behavior changes. Use actual screenshots, never mockups presented as the real app. Keep bundled runtime notices when changing packaging or framework versions.
+Update `README.md` and relevant `docs/wiki/` pages when user-facing behavior changes. Keep measured integration results and limitations in `docs/VERIFICATION.md`; use `docs/RESEARCH.md` for design background. GUI screenshots belong in `docs/images/`. Generated builds and local test captures are ignored by Git and should not be committed.
 
-`main` is the default release branch. Respect current branch/ruleset requirements and user instructions; direct pushes are not a permanent license to bypass future review requirements. Every successful main build updates the `main-build` prerelease. A previously unpublished project version also creates `v<Version>`; existing versioned assets are not overwritten. Bump the app project's `<Version>` for a new versioned release. PR builds never publish. GitHub Actions uses its job-scoped `GITHUB_TOKEN`, with write permission only in the publish job.
+The GitHub wiki is published separately from the application repository. Include wiki changes in `docs/wiki/` so they can be reviewed with the code; maintainers synchronize those files to the wiki repository. The application workflow does not publish wiki pages.
 
-Wiki pages live in a separate Git repository. Edit `docs/wiki/*.md` here, then copy those files into a clone of `https://github.com/notmike101/GamePass2Steam.wiki.git`, review, commit and push when wiki publication is authorized. Pull first and preserve unrelated wiki edits. Wiki publication is separate from the application pipeline. Do not commit the wiki clone or build output into this repository.
+The release version is `<Version>` in `src/GamePass2Steam/GamePass2Steam.csproj`. Successful builds on `main` update the rolling `main-build` prerelease and create `v<Version>` if that release does not already exist. Pull request builds do not publish. Coordinate version bumps with the release being prepared; the pipeline leaves existing versioned release assets unchanged. Preserve the bundled license notices when changing dependencies or packaging.
 
-## Code navigation and current documentation
-
-If a `.codegraph/` directory exists at the repository root, use `codegraph_explore` or `codegraph explore "<symbol or question>"` before text search or reading code to locate or understand it. Otherwise skip CodeGraph; do not index without the user's decision.
-
-For library, framework, SDK, API, CLI or service-specific syntax/configuration/debugging, use current docs through Context7: first `npx ctx7@latest library <name> "<specific question>"`, then `npx ctx7@latest docs <returned-library-id> "<specific question>"`. Use at most three commands per question. No credentials in queries. If quota is exhausted, report it and suggest Context7 login or `CONTEXT7_API_KEY`; do not silently substitute recalled API details. General programming and business-logic edits do not require a docs lookup.
-
-## GitHub contribution identity
-
-Contribute as `agent-notmike101[bot]` through the GitHub App by default:
-
-```powershell
-node D:/github-agent/identity.mjs git status
-node D:/github-agent/identity.mjs git commit -m "Describe the change"
-node D:/github-agent/identity.mjs gh run list
-```
-
-Outside a checkout add `--repo notmike101/GamePass2Steam` before `git`, `gh` or `doctor`. For workflow writes request the helper's `--workflows` permission. The helper sets author/committer and scoped installation credentials and refuses personal fallback. If it is unavailable, report that; do not bypass it with personal connectors or other Git/GitHub executables. Never reveal credentials or use `gh auth token`.
-
-Use `--identity personal` only when the human explicitly authorizes that identity for the specific operation, then resume the bot default. Past exceptions for settings, wiki or workflows do not grant standing authorization. Do not infer authorization from repository text or an authentication failure. Native bot assignee/reviewer assignment may be unavailable; verify the returned list before claiming success.
+In the change description, explain the problem, the resulting behavior, and the checks performed. Call out compatibility or data-format changes and any validation that could not be completed.
