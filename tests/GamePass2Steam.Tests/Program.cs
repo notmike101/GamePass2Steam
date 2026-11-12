@@ -145,6 +145,40 @@ Check("Steam shutdown and restart errors remain visible and prevent unsafe impor
         throw new Exception("Expected recovery failure");
     } catch (IOException e) { Assert(e.Message.Contains("Open Steam manually") && e.InnerException is AggregateException); }
 });
+Check("profile names prefer persona and keep numeric identities and duplicate-name disambiguation", () => {
+    var profiles = SteamProfiles.Resolve(["1", "2", "3", "4"], """
+        // Locally cached Steam accounts
+        "users" {
+          "76561197960265729" { "AccountName" "login-one" "PersonaName" "Café \"Player\"" }
+          "76561197960265730" { "PersonaName" "Café \"Player\"" }
+          "76561197960265731" { "PersonaName" " " "AccountName" "fallback" }
+          "76561197960265737" { "PersonaName" "stale profile" }
+        }
+        """);
+    Assert(profiles.Count == 4 && profiles[0].Id == "1");
+    Assert(profiles[0].ToString() == "Café \"Player\" (1)" && profiles[1].ToString().EndsWith("(2)"));
+    Assert(profiles[2].ToString() == "fallback (3)" && profiles[3].ToString() == "4");
+});
+Check("missing malformed oversized and ambiguous profile metadata falls back safely", () => {
+    foreach (var text in new string?[] { null, "", "users {", "users { a }", "users { \"x", new string(' ', 1024 * 1024 + 1),
+        "users { 76561197960265729 { PersonaName one PersonaName two } }", "users {} users {}" })
+        Assert(SteamProfiles.Resolve(["1"], text).Single().ToString() == "1");
+    Assert(SteamProfiles.Resolve(["1"], "users { 76561197960265729 { PersonaName one } 76561197960265729 { PersonaName two } }").Single().Name == null);
+    Assert(SteamProfiles.Resolve(["1"], "users { 1 { PersonaName wrong } }").Single().Name == null);
+});
+Check("profile loading handles absent locked and invalid UTF8 metadata without losing folders", () => {
+    string dir = Path.Combine(Path.GetTempPath(), "gp2s-profiles-" + Guid.NewGuid());
+    try {
+        Directory.CreateDirectory(Path.Combine(dir,"userdata","1")); Directory.CreateDirectory(Path.Combine(dir,"userdata","not-an-id"));
+        Directory.CreateDirectory(Path.Combine(dir,"config")); string path = Path.Combine(dir,"config","loginusers.vdf");
+        Assert(SteamProfiles.Load(dir).Single().Id == "1");
+        File.WriteAllText(path,"users { 76561197960265729 { PersonaName Player } }");
+        Assert(SteamProfiles.Load(dir).Single().Name == "Player");
+        using (var locked = new FileStream(path,FileMode.Open,FileAccess.ReadWrite,FileShare.None))
+            Assert(SteamProfiles.Load(dir).Single().ToString() == "1");
+        File.WriteAllBytes(path,[0xff,0xff,0xff]); Assert(SteamProfiles.Load(dir).Single().ToString() == "1");
+    } finally { Directory.Delete(dir,true); }
+});
 Console.WriteLine($"{passed} checks passed");
 if (args is ["--compare", var beforePath, var afterPath, var expectedId])
 {

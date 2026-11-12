@@ -4,7 +4,7 @@ A Windows application for adding registered Xbox PC games to Steam as non-Steam 
 
 Version 0.1.0 targets **Windows 10/11 x64**. Windows 11 is the integration test environment. See [verification](docs/VERIFICATION.md) for measured results; launch support does not imply Steam Overlay, Steam Input or Remote Play support.
 
-**[Download the latest release](https://github.com/notmike101/GamePass2Steam/releases/latest)** · **[User wiki](https://github.com/notmike101/GamePass2Steam/wiki)** · [Latest main build](https://github.com/notmike101/GamePass2Steam/releases/tag/main-build)
+**[Download the latest release](https://github.com/notmike101/GamePass2Steam/releases/latest)** · **[User wiki](https://github.com/notmike101/GamePass2Steam/wiki)**
 
 ## Screenshots
 
@@ -19,7 +19,7 @@ Steam must be fully closed before shortcuts can be changed. The app explains how
 ## Install and use
 
 1. Extract the entire `GamePass2Steam-0.1.0-win-x64.zip` into a **permanent folder**, for example `%LOCALAPPDATA%\Programs\GamePass2Steam`. Keep all files together. No Node.js, pnpm, .NET installation, SDK, administrator privileges or build tools are needed.
-2. Run `GamePass2Steam.exe`. Select the intended local Steam profile. The active profile is selected if Windows provides it; otherwise choose explicitly. Profile IDs match folders under Steam's `userdata` directory.
+2. Run `GamePass2Steam.exe`. Select the intended local Steam profile. The selector uses the locally cached Steam display name (or account name), followed by its numeric ID for disambiguation. Missing or unreadable metadata falls back to the ID. No network or API key is needed. The active profile is selected if Windows provides it; otherwise choose explicitly. Profile IDs match folders under Steam's `userdata` directory and remain the identifiers used by CLI commands.
 3. Check games in the Add column. If missing, enable **Include other registered apps**, or use **Find game folder** to match a folder to Windows registration. This fallback accepts a game directory or its Content folder and does not register or modify the game.
 4. Use **Steam > Exit**, or click **Add / update selected** while Steam is running and explicitly accept the offer to close and reopen Steam for this import. Save any game progress first; shutdown may interrupt games or downloads. No/Cancel leaves Steam and shortcuts unchanged. The choice is asked each time and is never saved. Closing Steam's window usually leaves Steam running; GamePass2Steam never force-closes it.
 5. Click **Add / update selected**, then reopen Steam. Select the game and click **Play**. Xbox/Windows still handles licensing, authentication, saves and updates. Finish any sign-in prompt yourself.
@@ -66,7 +66,7 @@ dotnet run --project src/GamePass2Steam
 
 The test executable uses isolated temporary profiles, not real Steam configuration. The packaging script runs tests and publishes all runtime files into a fresh staging directory, then creates a ZIP and SHA-256 in `dist`. Windows CI performs the same build and a packaged discovery smoke test in a path containing spaces and Unicode. CI does not verify a licensed game reaches its menu. Local `dist` is ignored by Git.
 
-Every successful push to `main` publishes a rolling **Latest main build** prerelease with a ZIP and checksum. When the project version has no release yet, the same pipeline also publishes an immutable versioned release (starting with `v0.1.0`). Increase `<Version>` in `src/GamePass2Steam/GamePass2Steam.csproj` for the next versioned release; existing versioned assets are never replaced. Pull requests build and test without publishing. Manual workflow runs publish only from `main`. See [AGENTS.md](AGENTS.md) for contribution rules and [release details](docs/wiki/Releases.md) for downloads and verification.
+Feature PRs target `dev`. After review and integration, open a PR from `dev` into `main`; only merging that same-repository PR can publish a release. The release workflow automatically increments the patch version (for example, `0.1.0` to `0.1.1`), runs tests and portable-package checks, then stores the bumped version in a tagged release commit and publishes an immutable versioned ZIP and checksum. It does not push version commits back to protected branches. Direct pushes, feature PR merges into `dev`, other PRs into `main`, and manual build runs do not publish. The old `main-build` rolling prerelease is no longer updated. See [AGENTS.md](AGENTS.md) for contribution rules and [release details](docs/wiki/Releases.md) for retry and promotion guidance.
 
 CLI commands (run the EXE with `Start-Process -Wait -PassThru` in scripts because it is a Windows GUI executable):
 
