@@ -21,11 +21,13 @@ Steam must be fully closed before shortcuts can be changed. The app explains how
 1. Extract the entire `GamePass2Steam-0.1.0-win-x64.zip` into a **permanent folder**, for example `%LOCALAPPDATA%\Programs\GamePass2Steam`. Keep all files together. No Node.js, pnpm, .NET installation, SDK, administrator privileges or build tools are needed.
 2. Run `GamePass2Steam.exe`. Select the intended local Steam profile. The selector uses the locally cached Steam display name (or account name), followed by its numeric ID for disambiguation. Missing or unreadable metadata falls back to the ID. No network or API key is needed. The active profile is selected if Windows provides it; otherwise choose explicitly. Profile IDs match folders under Steam's `userdata` directory and remain the identifiers used by CLI commands.
 3. Check games in the Add column. If missing, enable **Include other registered apps**, or use **Find game folder** to match a folder to Windows registration. This fallback accepts a game directory or its Content folder and does not register or modify the game.
-4. Use **Steam > Exit**. Closing Steam's window usually leaves Steam running. GamePass2Steam refuses to write while Steam runs and never terminates Steam.
+4. Use **Steam > Exit**, or click **Add / update selected** while Steam is running and explicitly accept the offer to close and reopen Steam for this import. Save any game progress first; shutdown may interrupt games or downloads. No/Cancel leaves Steam and shortcuts unchanged. The choice is asked each time and is never saved. Closing Steam's window usually leaves Steam running; GamePass2Steam never force-closes it.
 5. Click **Add / update selected**, then reopen Steam. Select the game and click **Play**. Xbox/Windows still handles licensing, authentication, saves and updates. Finish any sign-in prompt yourself.
 6. Quit from the game's menu. The launcher exits when the matching game process disappears, after a short handoff debounce.
 
 Re-importing updates the launcher location without duplicating the game or changing its existing appid, name, artwork references or other user metadata. Keep the `GamePass2Steam:` tag: it marks ownership. **Remove managed selected** only removes managed Steam entries, including ones whose game was uninstalled; it never uninstalls games. A similarly named unmanaged entry is intentionally preserved.
+
+The optional GUI import waits up to 60 seconds for normal Steam shutdown, then uses the same safe-write checks. If shutdown is refused or times out, nothing is imported. Canceling skips the import but continues observing shutdown so Steam can be reopened if it closes. After a completed shutdown, reopening is attempted even if the import fails. If Steam closes after the timeout or reopening fails, open Steam manually. Removal, restore and CLI commands still require you to exit Steam yourself.
 
 ## Updates and moving the app
 

@@ -2,7 +2,9 @@
 
 ## “Exit Steam using Steam > Exit”
 
-Closing Steam's window is not enough. Use its **Steam > Exit** command, wait for it to finish, then retry. GamePass2Steam does not terminate Steam or save while it is detected running.
+Closing Steam's window is not enough. Use its **Steam > Exit** command, wait for it to finish, then retry. GUI imports also offer to request a normal shutdown and reopen Steam, with explicit consent each time. Removal, restore and CLI commands still require manual exit. GamePass2Steam never force-kills Steam or saves while it is detected running.
+
+The optional import waits up to 60 seconds. If Steam refuses to exit or times out, no shortcuts are changed. **Cancel import** skips writing but continues watching for shutdown so Steam can be reopened; this can take the remainder of the timeout. If Steam closes later, reopen it manually. A reopening failure is reported separately, including whether the shortcut operation completed.
 
 ![Steam running protection](https://raw.githubusercontent.com/notmike101/GamePass2Steam/main/docs/images/steam-running-guard.png)
 
