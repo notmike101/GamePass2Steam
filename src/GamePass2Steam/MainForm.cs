@@ -6,7 +6,7 @@ namespace GamePass2Steam;
 
 public sealed class MainForm : Form
 {
-    private readonly ComboBox profiles = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 240, AccessibleName = "Steam profile" };
+    private readonly ComboBox profiles = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 240, DropDownWidth = 480, AccessibleName = "Steam profile" };
     private readonly TextBox search = new() { PlaceholderText = "Filter games by name…", Width = 250, AccessibleName = "Filter games" };
     private readonly CheckBox allApps = new() { Text = "Include other registered apps", AutoSize = true };
     private readonly DataGridView grid = new() { Dock = DockStyle.Fill, AutoGenerateColumns = false, AllowUserToAddRows = false, AllowUserToDeleteRows = false, RowHeadersVisible = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect, BackgroundColor = SystemColors.Window, BorderStyle = BorderStyle.FixedSingle, AccessibleName = "Installed games" };
@@ -58,8 +58,8 @@ public sealed class MainForm : Form
         steam = Discovery.SteamPath();
         using var active = Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam\ActiveProcess");
         string activeId = Convert.ToUInt32(active?.GetValue("ActiveUser") ?? 0).ToString();
-        foreach (string directory in Directory.GetDirectories(Path.Combine(steam, "userdata")).Where(p => uint.TryParse(Path.GetFileName(p), out _))) profiles.Items.Add(Path.GetFileName(directory));
-        profiles.SelectedItem = activeId;
+        foreach (var profile in SteamProfiles.Load(steam)) profiles.Items.Add(profile);
+        profiles.SelectedItem = profiles.Items.Cast<SteamProfile>().FirstOrDefault(p => p.Id == activeId);
         if (profiles.SelectedIndex < 0 && profiles.Items.Count == 1) profiles.SelectedIndex = 0;
         await RefreshGames();
     }
@@ -70,7 +70,8 @@ public sealed class MainForm : Form
         foreach (string warning in result.Warnings) Log.Write("Discovery warning: " + warning);
         status.Text = $"Found {games.Count(g => g.LikelyGame)} likely games and {games.Count} registered apps. " + (Discovery.SteamRunning() ? "Steam is running: exit Steam before making changes. " : "Steam is closed. ") + (result.Warnings.Count > 0 ? $"{result.Warnings.Count} discovery warnings; see logs. " : "") + "Keep this application in its current folder so Steam can find it.";
     }
-    private ShortcutStore Store() => new(Discovery.ProfilePath(steam, profiles.SelectedItem?.ToString() ?? throw new IOException("Select the intended Steam profile first. IDs correspond to Steam's userdata folders.")), Discovery.SteamRunning);
+    private string ProfileId() => (profiles.SelectedItem as SteamProfile)?.Id ?? throw new IOException("Select the intended Steam profile first.");
+    private ShortcutStore Store() => new(Discovery.ProfilePath(steam, ProfileId()), Discovery.SteamRunning);
     private void TryPopulate() { try { Populate(); } catch (Exception e) { status.Text = e.Message; } }
     private void Populate()
     {
@@ -107,7 +108,7 @@ public sealed class MainForm : Form
     }
     private Task Restore()
     {
-        using var dialog = new OpenFileDialog { Title = "Restore a Steam shortcuts backup", Filter = "GamePass2Steam backups|*.bak", InitialDirectory = Path.GetDirectoryName(Discovery.ProfilePath(steam, profiles.SelectedItem?.ToString() ?? "")) };
+        using var dialog = new OpenFileDialog { Title = "Restore a Steam shortcuts backup", Filter = "GamePass2Steam backups|*.bak", InitialDirectory = Path.GetDirectoryName(Discovery.ProfilePath(steam, ProfileId())) };
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
             if (MessageBox.Show(this, "Restore this entire shortcut snapshot? Changes made since the backup will be replaced. The current file will be backed up first.", "Restore shortcuts", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK) return Task.CompletedTask;
