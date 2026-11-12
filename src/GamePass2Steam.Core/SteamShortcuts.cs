@@ -64,6 +64,18 @@ public static class SteamShortcuts
 
 public sealed class ShortcutStore(string path, Func<bool> steamRunning)
 {
+    public string ConfigDirectory => Path.GetDirectoryName(Path.GetFullPath(path))!;
+    public string? FillIcon(string id, uint appId, string iconPath) => Change(root =>
+    {
+        var entry = SteamShortcuts.Entries(root).Single(e => SteamShortcuts.ManagedId(e) == id);
+        if (!Path.IsPathFullyQualified(iconPath) || !File.Exists(iconPath)) throw new InvalidDataException("Icon file is unavailable.");
+        var storedId = entry.Children!.Single(n => n.Name.Equals("appid", StringComparison.OrdinalIgnoreCase));
+        if (storedId.Type != 2 || BitConverter.ToUInt32(storedId.Data!) != appId) throw new InvalidDataException("Shortcut changed before icon update.");
+        int index = entry.Children!.FindIndex(n => n.Name.Equals("icon", StringComparison.OrdinalIgnoreCase));
+        if (index >= 0 && entry.Children[index].Type != 1 || !string.IsNullOrWhiteSpace(entry.Text("icon"))) return;
+        if (index >= 0) entry.Children[index] = VdfNode.String(entry.Children[index].Name, iconPath);
+        else entry.Children.Add(VdfNode.String("icon", iconPath));
+    });
     public List<VdfNode> Read() => File.Exists(path) ? BinaryVdf.Read(File.ReadAllBytes(path)) : [VdfNode.Object("shortcuts")];
     public string? Apply(IEnumerable<Game> games, string launcher, bool remove) => Change(root => SteamShortcuts.Update(root, games, launcher, remove));
     public string? Restore(string backup)

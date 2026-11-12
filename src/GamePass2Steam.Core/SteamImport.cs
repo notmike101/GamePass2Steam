@@ -4,8 +4,12 @@ namespace GamePass2Steam.Core;
 
 public static class SteamImport
 {
-    public static async Task Run(bool authorized, Func<bool> running, Action requestExit, Action restart,
+    public static Task Run(bool authorized, Func<bool> running, Action requestExit, Action restart,
         Action import, CancellationToken cancellation = default, Func<Task>? wait = null)
+        => RunAsync(authorized, running, requestExit, restart, () => { import(); return Task.CompletedTask; }, cancellation, wait);
+
+    public static async Task RunAsync(bool authorized, Func<bool> running, Action requestExit, Action restart,
+        Func<Task> import, CancellationToken cancellation = default, Func<Task>? wait = null)
     {
         bool wasRunning = running();
         if (wasRunning && !authorized) throw new IOException("Exit Steam manually before importing.");
@@ -25,7 +29,7 @@ public static class SteamImport
             }
             cancellation.ThrowIfCancellationRequested();
             if (running()) throw new IOException("Steam restarted before the import. Nothing was imported.");
-            import();
+            await import();
         }
         catch (Exception e) { failure = e; }
         if (reopen && !running())

@@ -4,6 +4,7 @@
 - [Getting started](Getting-Started)
 - [Managing shortcuts](Managing-Shortcuts)
 - [Compatibility](Compatibility)
+- [Optional artwork](Artwork)
 - [Troubleshooting](Troubleshooting)
 - [Releases and checksums](Releases)
 

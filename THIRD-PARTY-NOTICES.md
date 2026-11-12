@@ -27,3 +27,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+# Optional artwork service
+
+Optional artwork is retrieved using the documented SteamGridDB API with a user-supplied session key. No SteamGridDB client library, SGDBoop source, API credentials or downloaded artwork is bundled. Downloaded artwork is not licensed under this repository's MIT license; source URLs and author attribution are recorded alongside each downloaded image. See `docs/wiki/Artwork.md` for usage and redistribution considerations.

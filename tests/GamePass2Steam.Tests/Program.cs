@@ -101,6 +101,7 @@ Check("session waits for real game, follows handoff, exits and bounds failure", 
     Assert(s.Observe(TimeSpan.FromSeconds(57),false)==SessionState.Exited);
     Assert(new SessionTracker().Observe(TimeSpan.FromSeconds(121),false)==SessionState.Failed);
 });
+ArtworkChecks.Run(Check, Assert, Throws);
 Check("Steam import requires per-operation authorization and leaves closed Steam closed", () => {
     int exits = 0, starts = 0, writes = 0;
     Throws(() => SteamImport.Run(false, () => true, () => exits++, () => starts++, () => writes++).GetAwaiter().GetResult());

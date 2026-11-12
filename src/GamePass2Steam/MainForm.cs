@@ -9,6 +9,8 @@ public sealed class MainForm : Form
     private readonly ComboBox profiles = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 240, DropDownWidth = 480, AccessibleName = "Steam profile" };
     private readonly TextBox search = new() { PlaceholderText = "Filter games by name…", Width = 250, AccessibleName = "Filter games" };
     private readonly CheckBox allApps = new() { Text = "Include other registered apps", AutoSize = true };
+    private readonly CheckBox artwork = new() { Text = "Fill missing SteamGridDB artwork", AutoSize = true };
+    private string? artworkKey;
     private readonly DataGridView grid = new() { Dock = DockStyle.Fill, AutoGenerateColumns = false, AllowUserToAddRows = false, AllowUserToDeleteRows = false, RowHeadersVisible = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect, BackgroundColor = SystemColors.Window, BorderStyle = BorderStyle.FixedSingle, AccessibleName = "Installed games" };
     private readonly Label status = new() { AutoSize = true, MaximumSize = new Size(1020, 0), Padding = new Padding(0, 8, 0, 0) };
     private readonly FlowLayoutPanel actions = new() { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true };
@@ -16,6 +18,7 @@ public sealed class MainForm : Form
     private string steam = "";
     private bool busy;
     private CancellationTokenSource? importCancellation;
+    private bool writingImport;
 
     public MainForm()
     {
@@ -27,6 +30,7 @@ public sealed class MainForm : Form
         layout.Controls.Add(new Label { Text = "Select games below, exit Steam, then add them. Windows handles sign-in, licensing and updates as usual.", AutoSize = true, Margin = new Padding(0, 0, 0, 18) });
         var filters = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, Padding = new Padding(0, 0, 0, 10) };
         filters.Controls.Add(new Label { Text = "Steam profile", AutoSize = true, Padding = new Padding(0, 5, 8, 0) }); filters.Controls.Add(profiles); filters.Controls.Add(search); filters.Controls.Add(allApps); layout.Controls.Add(filters);
+        filters.Controls.Add(artwork);
         grid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Selected", HeaderText = "Add", Width = 45 });
         grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Game", HeaderText = "Game", ReadOnly = true, AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 40 });
         grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Type", HeaderText = "Installation", ReadOnly = true, Width = 190 });
@@ -36,11 +40,12 @@ public sealed class MainForm : Form
         layout.Controls.Add(grid);
         AddButton("Add / update selected", () => Mutate(false)); AddButton("Remove managed selected", () => Mutate(true));
         AddButton("Refresh", RefreshGames); AddButton("Find game folder…", FindFolder); AddButton("Restore backup…", Restore);
+        AddButton("Artwork settings…", () => { artworkKey = ArtworkUi.Configure(this, artworkKey); return Task.CompletedTask; });
         AddButton("Open logs", () => { Directory.CreateDirectory(Log.DirectoryPath); Process.Start(new ProcessStartInfo(Log.DirectoryPath) { UseShellExecute = true }); return Task.CompletedTask; });
         layout.Controls.Add(actions); layout.Controls.Add(status); Controls.Add(layout);
         search.TextChanged += (_, _) => Populate(); allApps.CheckedChanged += (_, _) => Populate(); profiles.SelectedIndexChanged += (_, _) => { if (!busy) TryPopulate(); };
         Shown += async (_, _) => await Execute(Initialize);
-        FormClosing += (_, e) => { if (importCancellation != null) { e.Cancel = true; importCancellation.Cancel(); status.Text = "Import canceled. Waiting for Steam shutdown recovery before closing this operation."; } };
+        FormClosing += (_, e) => { if (importCancellation != null) { e.Cancel = true; if (!writingImport) importCancellation.Cancel(); status.Text = writingImport ? "Finishing shortcuts/artwork before reopening Steam. Please wait." : "Import canceled. Waiting for Steam shutdown recovery."; } };
     }
     private void AddButton(string text, Func<Task> action)
     {
@@ -94,6 +99,20 @@ public sealed class MainForm : Form
         if (!remove && selected.Any(g => g.Executables.Count == 0)) throw new IOException("A selected game is no longer installed. Repair it in Xbox, or remove its managed Steam entry.");
         var store = Store();
         string? backup = null;
+        string artworkResult = "";
+        async Task WriteSelected()
+        {
+            backup = store.Apply(selected, Environment.ProcessPath!, remove);
+            if (!remove && artwork.Checked)
+            {
+                if (string.IsNullOrWhiteSpace(artworkKey)) artworkResult = " Artwork skipped: enter your API key in Artwork settings.";
+                else
+                {
+                    try { artworkResult = await ArtworkUi.Fill(this, selected, store, artworkKey); }
+                    catch (Exception) { artworkResult = " Shortcuts saved; artwork could not be completed. Retry artwork later."; }
+                }
+            }
+        }
         bool restart = !remove && Discovery.SteamRunning();
         if (restart)
         {
@@ -104,8 +123,8 @@ public sealed class MainForm : Form
             using var waiting = new Form { Text = "Waiting for Steam", Size = new Size(520, 210), StartPosition = FormStartPosition.CenterParent, MinimizeBox = false, MaximizeBox = false };
             var message = new Label { Text = "Waiting up to 60 seconds for Steam to close normally…", Dock = DockStyle.Fill, Padding = new Padding(16) };
             var cancel = new Button { Text = "Cancel import", Dock = DockStyle.Bottom, Height = 40 };
-            bool complete = false;
-            void Cancel() { cancellation.Cancel(); cancel.Enabled = false; message.Text = "Import canceled. Waiting for Steam to finish closing so it can be reopened. No shortcuts will be changed."; }
+            bool complete = false, writing = false;
+            void Cancel() { if (writing) return; cancellation.Cancel(); cancel.Enabled = false; message.Text = "Import canceled. Waiting for Steam to finish closing so it can be reopened. No shortcuts will be changed."; }
             cancel.Click += (_, _) => Cancel();
             waiting.FormClosing += (_, e) => { if (!complete) { e.Cancel = true; Cancel(); } };
             waiting.Controls.Add(message); waiting.Controls.Add(cancel); waiting.Show(this);
@@ -117,15 +136,16 @@ public sealed class MainForm : Form
             }
             try
             {
-                await SteamImport.Run(true, Discovery.SteamRunning, () => StartSteam(true), () => StartSteam(false),
-                    () => backup = store.Apply(selected, Environment.ProcessPath!, false), cancellation.Token);
+                await SteamImport.RunAsync(true, Discovery.SteamRunning, () => StartSteam(true), () => StartSteam(false),
+                    async () => { writing = writingImport = true; cancel.Enabled = false; message.Text = "Updating shortcuts and optional artwork. Steam will reopen when this finishes."; await WriteSelected(); }, cancellation.Token);
             }
             catch (OperationCanceledException) { status.Text = "Import canceled. No shortcuts were changed. Steam was reopened if shutdown completed."; return; }
-            finally { complete = true; importCancellation = null; waiting.Close(); }
+            finally { complete = true; writingImport = false; importCancellation = null; waiting.Close(); }
         }
-        else backup = store.Apply(selected, Environment.ProcessPath!, remove);
+        else await WriteSelected();
         Populate();
         status.Text = (remove ? "Removed selected managed shortcuts. Installed games are untouched. " : "Steam shortcuts are ready. Open Steam and select Play. ") + (backup == null ? "No file changes were needed." : "Backup: " + backup);
+        status.Text += artworkResult;
     }
     private Task FindFolder()
     {
