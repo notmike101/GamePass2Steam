@@ -20,9 +20,9 @@ public sealed class MainForm : Form
     {
         Text = "GamePass2Steam"; MinimumSize = new Size(850, 540); Size = new Size(1120, 720); StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), ColumnCount = 1, RowCount = 6 };
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.Controls.Add(new Label { Text = "Your Xbox games. In your Steam library.", Font = new Font("Segoe UI", 21, FontStyle.Bold), AutoSize = true, Margin = new Padding(0, 0, 0, 8) });
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), ColumnCount = 1, RowCount = 5 };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.Controls.Add(new Label { Text = "Select games below, exit Steam, then add them. Windows handles sign-in, licensing and updates as usual.", AutoSize = true, Margin = new Padding(0, 0, 0, 18) });
         var filters = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, Padding = new Padding(0, 0, 0, 10) };
         filters.Controls.Add(new Label { Text = "Steam profile", AutoSize = true, Padding = new Padding(0, 5, 8, 0) }); filters.Controls.Add(profiles); filters.Controls.Add(search); filters.Controls.Add(allApps); layout.Controls.Add(filters);
