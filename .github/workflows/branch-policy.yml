@@ -1,0 +1,27 @@
+name: Branch policy
+on:
+  pull_request_target:
+    branches: [dev, main]
+    types: [opened, synchronize, reopened, edited]
+permissions:
+  contents: read
+jobs:
+  branch-policy:
+    name: Branch policy
+    runs-on: ubuntu-latest
+    steps:
+      # Validate metadata only. Never check out or execute the pull request's code here.
+      - name: Validate promotion source
+        shell: bash
+        env:
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if [[ "$BASE_BRANCH" == "main" ]] &&
+             { [[ "$HEAD_BRANCH" != "dev" ]] || [[ "$HEAD_REPOSITORY" != "$REPOSITORY" ]]; }; then
+            echo '::error::Only a PR from this repository’s dev branch may merge into main. Target feature PRs at dev.'
+            exit 1
+          fi
+          echo 'Branch policy passed.'
