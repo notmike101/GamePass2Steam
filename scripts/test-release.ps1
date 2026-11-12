@@ -27,6 +27,9 @@ Check ((Get-NextVersion '1.0.0' @('v0.1.5')) -eq '1.0.1') 'higher project versio
 $rejected = $false
 try { Get-NextVersion 'invalid' @() | Out-Null } catch { $rejected = $true }
 Check $rejected 'malformed version is rejected'
+$releaseSource = Get-Content "$PSScriptRoot/release.ps1" -Raw
+$pushes = [regex]::Matches($releaseSource, '(?m)^\s*git push[^\r\n]+')
+Check ($pushes.Count -eq 1 -and $pushes[0].Value -match '--atomic origin "refs/tags/\$tag" "refs/tags/\$marker"$') 'release publishes only version and retry tags, never protected branches'
 foreach ($file in 'release.ps1','package.ps1','test-package.ps1') {
     $parseErrors = $null
     [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $file), [ref]$null, [ref]$parseErrors) | Out-Null

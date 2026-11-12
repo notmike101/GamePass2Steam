@@ -64,7 +64,8 @@ $expected = (Get-Content "$archive.sha256").Split(' ')[0]
 if ((Get-FileHash $archive -Algorithm SHA256).Hash -ne $expected) { throw 'Artifact checksum mismatch' }
 $remoteMarker = git ls-remote origin "refs/tags/$marker"
 if (!$remoteMarker) {
-    git push --atomic origin 'HEAD:refs/heads/main' "refs/tags/$tag" "refs/tags/$marker"
+    # Release versions live on tags so publishing never bypasses branch review rules.
+    git push --atomic origin "refs/tags/$tag" "refs/tags/$marker"
 } elseif (($remoteMarker -split '\s+')[0] -ne $commit) { throw 'Remote release marker changed' }
 
 $releases = gh release list --limit 1000 --json tagName,isDraft | ConvertFrom-Json
