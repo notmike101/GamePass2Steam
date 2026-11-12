@@ -1,0 +1,66 @@
+# GamePass2Steam
+
+A Windows application for adding registered Xbox PC games to Steam as non-Steam games. It uses Windows activation, keeps a launcher alive for the detected game session, and safely maintains its own Steam shortcuts.
+
+Version 0.1.0 targets **Windows 10/11 x64**. Windows 11 is the integration test environment. See [verification](docs/VERIFICATION.md) for measured results; launch support does not imply Steam Overlay, Steam Input or Remote Play support.
+
+## Install and use
+
+1. Extract the entire `GamePass2Steam-0.1.0-win-x64.zip` into a **permanent folder**, for example `%LOCALAPPDATA%\Programs\GamePass2Steam`. Keep all files together. No Node.js, pnpm, .NET installation, SDK, administrator privileges or build tools are needed.
+2. Run `GamePass2Steam.exe`. Select the intended local Steam profile. The active profile is selected if Windows provides it; otherwise choose explicitly. Profile IDs match folders under Steam's `userdata` directory.
+3. Check games in the Add column. If missing, enable **Include other registered apps**, or use **Find game folder** to match a folder to Windows registration. This fallback accepts a game directory or its Content folder and does not register or modify the game.
+4. Use **Steam > Exit**. Closing Steam's window usually leaves Steam running. GamePass2Steam refuses to write while Steam runs and never terminates Steam.
+5. Click **Add / update selected**, then reopen Steam. Select the game and click **Play**. Xbox/Windows still handles licensing, authentication, saves and updates. Finish any sign-in prompt yourself.
+6. Quit from the game's menu. The launcher exits when the matching game process disappears, after a short handoff debounce.
+
+Re-importing updates the launcher location without duplicating the game or changing its existing appid, name, artwork references or other user metadata. Keep the `GamePass2Steam:` tag: it marks ownership. **Remove managed selected** only removes managed Steam entries, including ones whose game was uninstalled; it never uninstalls games. A similarly named unmanaged entry is intentionally preserved.
+
+## Updates and moving the app
+
+Exit GamePass2Steam and any game launched through it. Extract a new release over the same application folder, keeping `GamePass2Steam.exe` at the same absolute path. The shortcut contains a stable AUMID, so package-version/path changes are resolved again at launch. If you move this app, close Steam and re-import the games from the new location. Do not run directly inside the ZIP or delete the folder after importing.
+
+## Backup and recovery
+
+Changes affect only `<Steam>\userdata\<profile>\config\shortcuts.vdf`. Existing files are backed up beside it as `shortcuts.vdf.gp2s-<UTC timestamp>-<unique>.bak`. Writes use a flushed temporary file and atomic Windows replacement. The first creation has no old file to back up. An unchanged import creates no new backup. Keep backups until satisfied with the result; they are not automatically pruned.
+
+To restore, exit Steam, choose the same profile, select **Restore backup**, and select the desired `.bak`. Restoration replaces the complete shortcut snapshot and first backs up the current file. Alternatively, with Steam closed, copy the current file somewhere safe and copy the chosen backup to `shortcuts.vdf`. Restore does not affect game installations or saves. If the original file is malformed and the app refuses restoration, use this manual copy procedure. Unknown binary types and malformed input are refused instead of overwritten.
+
+Steam has no supported transactional API for non-Steam shortcuts. Do not start Steam or another shortcut editor while saving. The app checks Steam both before and just before replacement, detects concurrent file changes, and serializes its own writers; this cannot prevent an unrelated process from writing in the final check/replace interval.
+
+## Compatibility and troubleshooting
+
+- **GDK / packaged Win32:** MicrosoftGame.config identifies the real game executable; Windows registration launches its normal bootstrapper. Custom drives/folders work through registration rather than a hardcoded XboxGames scan. Development-only executables are excluded.
+- **UWP:** registered applications with a manifest executable use the same activation API and executable/package matching. Xbox Live protocol metadata marks likely games. The optional full app list handles incomplete game metadata. Game Pass subscription ownership cannot be inferred from local registration: purchased Microsoft Store games may also appear.
+- Dependencies/resource packages and entries without Start-menu registration or a trackable executable are excluded. DLC without its own visible application is excluded. Visible DLC launchers cannot always be distinguished from games.
+- EA, Ubisoft and other external-launcher-only installations, unregistered loose Win32 games, ARM64/x86 builds, elevated/protected processes and games that hand off to an undeclared differently named executable are not supported by this release. Use the official launcher for these. No license bypass or guessed protocol fallback is used.
+- A game that needs an update or sign-in may not reach its process within 120 seconds. The launcher reports failure and exits; open it through Xbox, finish setup, then retry. Running it before Steam launch is rejected to avoid claiming an unrelated session.
+- A process crash is not proof of successful gameplay. Protected processes that deny inspection can cause tracking to fail. A background/suspended UWP process that stays alive after its window closes currently requires ending that app normally in Windows; UWP exit behavior has not been validated on a real game.
+- Steam Overlay, Steam Input and Remote Play are separate capabilities and are not promised. The launcher does not inject anything into the game or translate controller input.
+- Logs are local at `%LOCALAPPDATA%\GamePass2Steam\logs`. They contain app identity, executable paths, activation/game PIDs and errors; review before sharing. No telemetry or artwork downloads are implemented.
+- This release is unsigned. Windows may show an unknown-publisher warning; compare the ZIP SHA-256 with its accompanying file and only use a trusted release source.
+
+## Development
+
+Install the .NET 10 SDK on Windows x64. No npm packages are used.
+
+```powershell
+dotnet build src/GamePass2Steam -c Release
+dotnet run --project tests/GamePass2Steam.Tests -c Release
+dotnet run --project src/GamePass2Steam
+./scripts/package.ps1
+```
+
+The test executable uses isolated temporary profiles, not real Steam configuration. The packaging script runs tests and publishes all runtime files into a fresh staging directory, then creates a ZIP and SHA-256 in `dist`. Windows CI performs the same build and a packaged discovery smoke test in a path containing spaces and Unicode. CI does not verify a licensed game reaches its menu. Release artifacts are available from successful workflow runs; local `dist` is ignored by Git.
+
+CLI commands (run the EXE with `Start-Process -Wait -PassThru` in scripts because it is a Windows GUI executable):
+
+```text
+GamePass2Steam.exe --discover --output discovery.json
+GamePass2Steam.exe --profiles --output profiles.json
+GamePass2Steam.exe --import "PackageFamily!ApplicationId" --profile NUMERIC_ID --output result.json
+GamePass2Steam.exe --remove "PackageFamily!ApplicationId" --profile NUMERIC_ID --output result.json
+GamePass2Steam.exe --restore "C:\path\shortcuts.vdf.gp2s-TIMESTAMP.bak" --profile NUMERIC_ID --output result.json
+GamePass2Steam.exe --launch "PackageFamily!ApplicationId"
+```
+
+Use the packaged EXE for real imports; importing through `dotnet run` would bind shortcuts to a development executable. The GUI exposes the same operations. Discovery reads only current-user registration. See [research and decisions](docs/RESEARCH.md), [implementation ledger](docs/PROGRESS.md) and [license notices](THIRD-PARTY-NOTICES.md).

@@ -7,3 +7,5 @@ Decision: fully C# for direct Windows integration and one runtime. User delegate
 Pre-flight: Core Game identity is consumed by discovery, launcher and Steam. Session tracker is consumed by native launcher and deterministic tests. Typed VDF nodes are consumed only by Steam safety layer and tests. UI/CLI share services. No conflicting interfaces.
 
 Task 1: complete. Assert suite failed first with missing core, then passed 10 checks. Independent VDF fixture, real temp-file backup/restore and concurrent-change checks. No user Steam writes. Binary VDF type 5 (wide string) deliberately rejected safely; supported scalar bytes retained unchanged.
+
+Tasks 2/3: Windows integration and native UI implemented; build zero warnings/errors, 10 safety checks pass. Development and self-contained packaged discovery both identify State of Decay 2. Portable release produced; live acceptance next.

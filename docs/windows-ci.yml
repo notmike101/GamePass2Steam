@@ -1,0 +1,36 @@
+name: Windows build and release artifact
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Test and package self-contained app
+        shell: pwsh
+        run: ./scripts/package.ps1
+      - name: Smoke test bundled runtime without SDK resolution
+        shell: pwsh
+        run: |
+          Expand-Archive dist/GamePass2Steam-0.1.0-win-x64.zip '${{ runner.temp }}/Game Pass Café'
+          $exe = '${{ runner.temp }}/Game Pass Café/GamePass2Steam.exe'
+          $report = '${{ runner.temp }}/discovery.json'
+          $env:DOTNET_ROOT = '${{ runner.temp }}/no-runtime'
+          $env:DOTNET_MULTILEVEL_LOOKUP = '0'
+          $p = Start-Process -FilePath $exe -ArgumentList @('--discover', '--output', ('"' + $report + '"')) -Wait -PassThru -WindowStyle Hidden
+          if ($p.ExitCode -ne 0) { throw (Get-Content $report -Raw) }
+          $data = Get-Content $report -Raw | ConvertFrom-Json
+          if ($null -eq $data.Games) { throw 'No discovery response' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GamePass2Steam-win-x64
+          path: |
+            dist/*.zip
+            dist/*.sha256
