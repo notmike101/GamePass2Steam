@@ -5,3 +5,5 @@
 Decision: fully C# for direct Windows integration and one runtime. User delegated architecture and prohibited subagents; design/plan/review are inline, no extra approval gates. Use current checkout rather than creating an unnecessary worktree. Preserve research scratch only in ignored .local.
 
 Pre-flight: Core Game identity is consumed by discovery, launcher and Steam. Session tracker is consumed by native launcher and deterministic tests. Typed VDF nodes are consumed only by Steam safety layer and tests. UI/CLI share services. No conflicting interfaces.
+
+Task 1: complete. Assert suite failed first with missing core, then passed 10 checks. Independent VDF fixture, real temp-file backup/restore and concurrent-change checks. No user Steam writes. Binary VDF type 5 (wide string) deliberately rejected safely; supported scalar bytes retained unchanged.
