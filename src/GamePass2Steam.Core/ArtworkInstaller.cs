@@ -83,9 +83,10 @@ public sealed class ArtworkInstaller(SteamGridDb api, Func<bool> steamRunning, A
                     using (var file = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { file.Write(bytes); file.Flush(true); }
                     if (steamRunning()) throw new ArtworkUnavailableException("Steam started; artwork changes stopped. Exit Steam and retry.", true);
                     if (Exists(directory, stem)) continue;
+                    // Keep failed attribution writes retryable: only commit the image after its source is saved.
+                    File.WriteAllText(path + ".gp2s-source.json", JsonSerializer.Serialize(new { Provider = "SteamGridDB", Game = match, AssetId = asset.Id, asset.Author, Source = asset.Url.AbsoluteUri }));
                     File.Move(temp, path, overwrite: false);
                     installed++;
-                    File.WriteAllText(path + ".gp2s-source.json", JsonSerializer.Serialize(new { Provider = "SteamGridDB", Game = match, AssetId = asset.Id, asset.Author, Source = asset.Url.AbsoluteUri }));
                     if (kind == ArtworkKind.Icon) store.FillIcon(id, shortcut.AppId, path);
                 }
                 finally { if (File.Exists(temp)) File.Delete(temp); }

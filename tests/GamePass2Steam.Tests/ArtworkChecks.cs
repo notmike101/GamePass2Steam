@@ -118,6 +118,35 @@ internal static class ArtworkChecks
                 installer.Fill(store,game.Id,new(123,"Game"),default).GetAwaiter().GetResult(); assert(requests == 10);
             } finally {Directory.Delete(directory,true);}
         });
+        check("failed icon attribution stays missing and completes on a later import", () => {
+            string directory = Path.Combine(Path.GetTempPath(),"gp2s-attribution-"+Guid.NewGuid()); Directory.CreateDirectory(directory);
+            try {
+                var game = new Game("Example.Game_abcd!Play","Game","Example.Game_abcd","",[],"",true);
+                string vdf = Path.Combine(directory,"shortcuts.vdf");
+                var store = new ShortcutStore(vdf,()=>false); store.Apply([game],Path.Combine(directory,"app.exe"),false);
+                byte[] before = File.ReadAllBytes(vdf);
+                var entry = SteamShortcuts.Entries(store.Read()).Single();
+                uint appId = BitConverter.ToUInt32(entry.Children!.Single(n=>n.Name=="appid").Data!);
+                string grid = Path.Combine(directory,"grid"), icon = Path.Combine(grid,ArtworkInstaller.Stem(appId,ArtworkKind.Icon)+".png");
+                string attribution = icon+".gp2s-source.json";
+                Directory.CreateDirectory(attribution); // A directory at the file path forces a real attribution write failure.
+                int requests = 0;
+                using var http = new HttpClient(new Handler(r=>{requests++; return r.RequestUri!.Host == "www.steamgriddb.com" ? Asset() : Image();}));
+                var installer = new ArtworkInstaller(new(http,Key),()=>false,SteamGridDb.ValidatePng);
+                var result = installer.Fill(store,game.Id,new(123,"Game"),default).GetAwaiter().GetResult();
+                assert(result.Warnings.Count == 1 && result.Installed == 4 && requests == 10);
+                assert(!File.Exists(icon) && ArtworkInstaller.Missing(store,game.Id));
+                assert(File.ReadAllBytes(vdf).SequenceEqual(before) && !Directory.GetFiles(grid,"*.tmp").Any());
+                var completed = Directory.GetFiles(grid,"*.png").ToDictionary(p=>p,File.ReadAllBytes);
+                Directory.Delete(attribution);
+                result = installer.Fill(store,game.Id,new(123,"Game"),default).GetAwaiter().GetResult();
+                assert(result.Installed == 1 && result.Warnings.Count == 0 && requests == 12);
+                assert(File.ReadAllBytes(icon).SequenceEqual(Png) && File.ReadAllText(attribution).Contains("Test Artist"));
+                assert(SteamShortcuts.Entries(store.Read()).Single().Text("icon") == icon && !ArtworkInstaller.Missing(store,game.Id));
+                foreach (var pair in completed) assert(File.ReadAllBytes(pair.Key).SequenceEqual(pair.Value));
+                assert(installer.Fill(store,game.Id,new(123,"Game"),default).GetAwaiter().GetResult().Installed == 0 && requests == 12);
+            } finally {Directory.Delete(directory,true);}
+        });
         check("artwork failures and Steam starting never roll back imported shortcuts or overwrite art", () => {
             foreach (bool steamStarts in new[] {false,true}) {
                 string directory = Path.Combine(Path.GetTempPath(),"gp2s-artfail-"+Guid.NewGuid()); Directory.CreateDirectory(directory);
