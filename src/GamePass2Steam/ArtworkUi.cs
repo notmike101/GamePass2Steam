@@ -73,7 +73,7 @@ internal static class ArtworkUi
         return $" Artwork: {installed} files installed; {warnings.Count} notices.";
     }
 
-    private static Task<ArtworkGame?> Choose(Form owner, SteamGridDb api, string title, List<ArtworkGame> candidates)
+    private static async Task<ArtworkGame?> Choose(Form owner, SteamGridDb api, string title, List<ArtworkGame> candidates)
     {
         using var dialog = new Form { Text = "Choose artwork match — " + title, Size = new Size(720, 450), MinimumSize = new Size(600, 350), StartPosition = FormStartPosition.CenterParent, Font = owner.Font };
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(12), ColumnCount = 1, RowCount = 4 };
@@ -91,16 +91,26 @@ internal static class ArtworkUi
         list.SelectedIndexChanged += (_, _) => use.Enabled = list.SelectedItem is ArtworkGame;
         use.Click += (_, _) => { if (list.SelectedItem is ArtworkGame) dialog.DialogResult = DialogResult.OK; };
         using var cancellation = new CancellationTokenSource();
+        ArtworkUnavailableException? stopFailure = null;
+        Task searchTask = Task.CompletedTask;
         dialog.FormClosing += (_, _) => cancellation.Cancel();
-        search.Click += async (_, _) => {
+        async Task Search()
+        {
             search.Enabled = use.Enabled = false;
             try {
                 var results = long.TryParse(query.Text.Trim(), out long id) ? new List<ArtworkGame> { await api.Game(id, cancellation.Token) } : await api.Search(query.Text.Trim(), cancellation.Token);
                 if (!dialog.IsDisposed) { list.Items.Clear(); list.Items.AddRange(results.Cast<object>().ToArray()); list.SelectedIndex = -1; }
+            } catch (ArtworkUnavailableException e) when (e.Stop) {
+                stopFailure = e;
+                if (dialog.Visible) dialog.Close();
             } catch (Exception e) { if (!dialog.IsDisposed && !cancellation.IsCancellationRequested) MessageBox.Show(dialog, ArtworkInstaller.SafeError(e), "Artwork search"); }
-            finally { if (!dialog.IsDisposed) search.Enabled = true; }
-        };
+            finally { if (!dialog.IsDisposed && stopFailure == null) search.Enabled = true; }
+        }
+        search.Click += (_, _) => searchTask = Search();
         buttons.Controls.Add(use); buttons.Controls.Add(skip); layout.Controls.Add(buttons); dialog.Controls.Add(layout); dialog.CancelButton = skip;
-        return Task.FromResult(dialog.ShowDialog(owner) == DialogResult.OK ? list.SelectedItem as ArtworkGame : null);
+        var result = dialog.ShowDialog(owner);
+        await searchTask;
+        if (stopFailure != null) throw stopFailure;
+        return result == DialogResult.OK ? list.SelectedItem as ArtworkGame : null;
     }
 }
