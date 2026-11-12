@@ -50,7 +50,13 @@ internal static class ArtworkUi
                 if (match == null)
                 {
                     var candidates = await api.Search(game.Name, cancellation.Token);
-                    match = SteamGridDb.ExactMatch(game.Name, candidates) ?? await Choose(owner, api, game.Name, candidates);
+                    match = SteamGridDb.ExactMatch(game.Name, candidates);
+                    if (match == null)
+                    {
+                        cancellation.CancelAfter(Timeout.InfiniteTimeSpan); // Time spent choosing a game is not a network timeout.
+                        match = await Choose(owner, api, game.Name, candidates);
+                        cancellation.CancelAfter(TimeSpan.FromMinutes(3));
+                    }
                 }
                 if (match == null) { warnings.Add(game.Name + ": artwork skipped; no match selected."); continue; }
                 var result = await installer.Fill(store, game.Id, match, cancellation.Token);
