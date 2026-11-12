@@ -101,6 +101,7 @@ Check("session waits for real game, follows handoff, exits and bounds failure", 
     Assert(s.Observe(TimeSpan.FromSeconds(57),false)==SessionState.Exited);
     Assert(new SessionTracker().Observe(TimeSpan.FromSeconds(121),false)==SessionState.Failed);
 });
+ArtworkChecks.Run(Check, Assert, Throws);
 Console.WriteLine($"{passed} checks passed");
 if (args is ["--compare", var beforePath, var afterPath, var expectedId])
 {

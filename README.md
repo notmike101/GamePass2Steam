@@ -27,6 +27,16 @@ Steam must be fully closed before shortcuts can be changed. The app explains how
 
 Re-importing updates the launcher location without duplicating the game or changing its existing appid, name, artwork references or other user metadata. Keep the `GamePass2Steam:` tag: it marks ownership. **Remove managed selected** only removes managed Steam entries, including ones whose game was uninstalled; it never uninstalls games. A similarly named unmanaged entry is intentionally preserved.
 
+## Optional library artwork
+
+Open **Artwork settings…** and enter your own [SteamGridDB API key](https://www.steamgriddb.com/profile/preferences/api), then enable **Fill missing SteamGridDB artwork** before adding/updating games. The key is masked and kept only in memory until this app closes; it is never saved, logged or included in releases. Artwork is disabled by default, and ordinary imports require neither a key nor network access.
+
+When enabled, game names are sent to SteamGridDB. A unique exact title match (ignoring punctuation, case and trademark symbols) can be selected automatically. Editions, ambiguous results and missing matches open a chooser where you can search another title, enter a SteamGridDB game ID, or skip artwork. Confirmed matches are remembered per shortcut/profile.
+
+Portrait and landscape grids, heroes, logos and icons use high-scoring static PNG assets where available. Existing files and custom icon fields are preserved; repeat imports fill missing categories without re-downloading installed images. Artwork errors never undo successful shortcut imports. Downloads require Steam to remain closed and are placed under the selected profile's `config/grid` using the shortcut's stored AppID. Icons are linked through the same guarded shortcut writer and backups.
+
+Each downloaded file has a `.gp2s-source.json` sidecar recording its source and author. Artwork belongs to its respective rights holders and is not covered by this project's MIT license or bundled into releases. See [the artwork guide](docs/wiki/Artwork.md) for formats, recovery, privacy and limitations.
+
 ## Updates and moving the app
 
 Exit GamePass2Steam and any game launched through it. Extract a new release over the same application folder, keeping `GamePass2Steam.exe` at the same absolute path. The shortcut contains a stable AUMID, so package-version/path changes are resolved again at launch. If you move this app, close Steam and re-import the games from the new location. Do not run directly inside the ZIP or delete the folder after importing.
@@ -48,7 +58,7 @@ Steam has no supported transactional API for non-Steam shortcuts. Do not start S
 - A game that needs an update or sign-in may not reach its process within 120 seconds. The launcher reports failure and exits; open it through Xbox, finish setup, then retry. Running it before Steam launch is rejected to avoid claiming an unrelated session.
 - A process crash is not proof of successful gameplay. Protected processes that deny inspection can cause tracking to fail. UWP tracking additionally requires a visible application window (including a child of ApplicationFrameHost); minimized windows remain eligible. This prevents suspended background processes from keeping the helper alive after the window closes, but UWP behavior has not been validated on a real game. Launch errors are logged and shown for up to 30 seconds before the helper exits.
 - Steam Overlay, Steam Input and Remote Play are separate capabilities and are not promised. The launcher does not inject anything into the game or translate controller input.
-- Logs are local at `%LOCALAPPDATA%\GamePass2Steam\logs`. They contain app identity, executable paths, activation/game PIDs and errors; review before sharing. No telemetry or artwork downloads are implemented.
+- Logs are local at `%LOCALAPPDATA%\GamePass2Steam\logs`. They contain app identity, executable paths, activation/game PIDs and errors; review before sharing. There is no telemetry. Optional artwork lookups contact SteamGridDB only when enabled; API keys and raw artwork service errors are not logged.
 - This release is unsigned. Windows may show an unknown-publisher warning; compare the ZIP SHA-256 with its accompanying file and only use a trusted release source.
 
 ## Development

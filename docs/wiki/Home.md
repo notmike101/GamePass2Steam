@@ -9,6 +9,7 @@ Add registered Xbox PC and Microsoft Store games to Steam, then launch them from
 - [Getting started](Getting-Started): requirements, installation and your first Steam launch.
 - [Managing shortcuts and backups](Managing-Shortcuts): updates, removal, moving the app and recovery.
 - [Compatibility](Compatibility): supported discovery methods, tested behavior and limitations.
+- [Optional artwork](Artwork): SteamGridDB setup, matching, preservation and attribution.
 - [Troubleshooting](Troubleshooting): missing games, Steam status, launch errors and useful reports.
 - [Releases](Releases): stable versions, latest main builds and checksum verification.
 
