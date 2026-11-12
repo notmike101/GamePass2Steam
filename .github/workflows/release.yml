@@ -46,7 +46,7 @@ jobs:
             dist/*.zip
             dist/*.sha256
           if-no-files-found: error
-      - name: Commit version and publish immutable release
+      - name: Push versioned tags and publish immutable release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
