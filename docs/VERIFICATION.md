@@ -18,7 +18,18 @@ This verifies local Steam tracking and local Friends List presence. Visibility f
 
 Local screenshots of main menu, Steam Running and Steam after exit are retained under ignored `.local/acceptance/`; excluded from repository/release because desktop captures may contain account information. Launcher logs reside under `%LOCALAPPDATA%\GamePass2Steam\logs`.
 
-## Automated checks
+## Optional GUI Steam restart — passed
+
+Tested PR #7 implementation `d2338c6` on 2026-11-12 with a freshly packaged self-contained build in a stable preview installation folder. The existing State of Decay 2 shortcut and the active Steam profile were used; the shortcut file was copied before testing.
+
+1. With Steam running, selected the existing managed game, clicked **Add / update selected**, and chose **Yes** in the per-operation close/reopen prompt. The GUI displayed its waiting-for-Steam state.
+2. A read-only process/file monitor sampled at approximately 100 ms. It observed the original Steam process disappear at 16:03:14.142 CST, the shortcut file change while no Steam process was present at 16:03:14.365, and a new Steam process appear at 16:03:14.493. These are observation times, not exact process-event timestamps.
+3. The importer returned to its ready state with controls enabled and a timestamped backup path. The actual before/after files retained the same shortcut count, stored AppID, and all managed metadata except the launch configuration. The unrelated shortcut was preserved byte for byte. The updated executable target exists in the stable preview folder.
+4. Steam reopened to its normal **Who's playing?** account chooser. The user selected their account; the library then opened and the managed game displayed **Play**. Reopening Steam does not bypass its account selection or authentication requirements.
+
+This verifies the real successful GUI close/update/reopen path. No force termination was used on Steam. Cancellation, timeout, write failure, and restart failure remain covered by controlled tests rather than deliberately disrupting the live client. This run did not launch the game or exercise artwork downloads. Local process/hash evidence and before/after files are retained under ignored `.local/acceptance/restart-live/`.
+
+## Original release automated checks
 
 `dotnet run --project tests/GamePass2Steam.Tests -c Release`: **12 checks passed**. Covers independent wire-fixture roundtrip, unknown metadata preservation, malformed/truncated/trailing/unsupported binary input, repeat import, user metadata preservation, removal, unsafe identities/quoting, ambiguous tags/indexes, UWP visibility policy, real temp-file backups/restore, no-op imports, running-Steam refusal, concurrent-change refusal, GDK metadata/path containment/DTD rejection, and startup/handoff/exit state.
 
