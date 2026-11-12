@@ -3,7 +3,6 @@
 ## Choose a download
 
 - **[Latest versioned release](https://github.com/notmike101/GamePass2Steam/releases/latest):** a fixed `v<major>.<minor>.<patch>` release. Download `GamePass2Steam-<version>-win-x64.zip` and its `.sha256` file. Existing versioned assets are not replaced by the pipeline.
-- **[Latest main build](https://github.com/notmike101/GamePass2Steam/releases/tag/main-build):** a rolling prerelease after successful main-branch checks. Its assets and tag change; the release notes identify the source commit. Use a versioned release for a fixed download.
 - **Source code archives:** intended for contributors; they are not the runnable Windows package.
 
 Each application ZIP includes the Windows x64 executable, .NET runtime files, documentation and third-party license notices. No separate runtime installation is required. Builds are unsigned.
@@ -23,6 +22,12 @@ Exit the app and games launched through it, then extract the new release into th
 
 ## How publishing works
 
-The [Windows build and publish action](https://github.com/notmike101/GamePass2Steam/actions/workflows/windows.yml) runs core tests, creates a self-contained package, and checks packaged discovery in a path containing spaces and Unicode. Only successful main-branch builds publish; pull requests cannot publish releases.
+The [Windows build action](https://github.com/notmike101/GamePass2Steam/actions/workflows/windows.yml) tests PRs and pushes to `dev` and `main`, creates a self-contained package, and checks packaged discovery in a path containing spaces and Unicode. Manual runs are build-only.
 
-Every successful main build refreshes `main-build`. If the project version has no versioned release yet, the workflow also publishes that version. Maintainers increase `<Version>` in `src/GamePass2Steam/GamePass2Steam.csproj` for the next versioned release. Manual workflow runs publish only when run on main. CI does not own a licensed game or verify Steam presence; real integration results are recorded separately in the [verification document](https://github.com/notmike101/GamePass2Steam/blob/main/docs/VERIFICATION.md).
+Feature PRs target `dev`. A maintainer reviews and merges a PR from this repository's `dev` into `main` when the integrated work is ready. Only that merged-PR event starts the [release action](https://github.com/notmike101/GamePass2Steam/actions/workflows/release.yml). Closing an unmerged PR, merging a different source branch, merging into `dev`, pushing directly to `main`, or manually running CI cannot publish a release.
+
+The release automatically increments the patch version above the current project version and stable version tags, then builds, tests, and smoke-tests the package. Once those checks pass, it commits the bumped version to `main` and publishes a fixed `v<major>.<minor>.<patch>` release containing the ZIP and SHA-256 file. The first promotion after `v0.1.0` normally produces `v0.1.1`. Existing published assets are not replaced. The historical `main-build` prerelease is no longer updated; use the latest versioned release.
+
+Maintainers should finish one promotion before merging the next, then merge `main` back into `dev` to synchronize its version commit. If `main` advances during a release, the workflow fails instead of overwriting commits or releasing an unintended snapshot. Reconcile the branch before retrying. Failed publication after the version commit can be retried using **Re-run all jobs** on the original merged-PR run: its `dev-release-pr-<number>` marker reuses the same version, resumes an incomplete draft, and leaves an already published release unchanged. Keep these marker tags. No personal credential or extra repository secret is required; the release job uses GitHub's scoped `GITHUB_TOKEN` with contents-write permission.
+
+CI does not own a licensed game or verify Steam presence; real integration results are recorded separately in the [verification document](https://github.com/notmike101/GamePass2Steam/blob/main/docs/VERIFICATION.md).

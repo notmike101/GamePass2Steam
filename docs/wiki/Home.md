@@ -10,6 +10,6 @@ Add registered Xbox PC and Microsoft Store games to Steam, then launch them from
 - [Managing shortcuts and backups](Managing-Shortcuts): updates, removal, moving the app and recovery.
 - [Compatibility](Compatibility): supported discovery methods, tested behavior and limitations.
 - [Troubleshooting](Troubleshooting): missing games, Steam status, launch errors and useful reports.
-- [Releases](Releases): stable versions, latest main builds and checksum verification.
+- [Releases](Releases): versioned downloads, release promotions and checksum verification.
 
 The first release is a portable, unsigned Windows x64 app with its .NET runtime included. It does not need administrator access or a separate .NET installation. It is an independent project and is not affiliated with Microsoft, Xbox or Valve.
