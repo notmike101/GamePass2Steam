@@ -4,6 +4,18 @@ A Windows application for adding registered Xbox PC games to Steam as non-Steam 
 
 Version 0.1.0 targets **Windows 10/11 x64**. Windows 11 is the integration test environment. See [verification](docs/VERIFICATION.md) for measured results; launch support does not imply Steam Overlay, Steam Input or Remote Play support.
 
+**[Download the latest release](https://github.com/notmike101/GamePass2Steam/releases/latest)** · **[User wiki](https://github.com/notmike101/GamePass2Steam/wiki)** · [Latest main build](https://github.com/notmike101/GamePass2Steam/releases/tag/main-build)
+
+## Screenshots
+
+Select installed games and the Steam profile to update. Existing managed entries are identified in the list.
+
+![GamePass2Steam showing State of Decay 2 selected for a Steam shortcut](docs/images/select-games.png)
+
+Steam must be fully closed before shortcuts can be changed. The app explains how to exit it and leaves Steam running.
+
+![GamePass2Steam refusing to edit shortcuts while Steam is running](docs/images/steam-running-guard.png)
+
 ## Install and use
 
 1. Extract the entire `GamePass2Steam-0.1.0-win-x64.zip` into a **permanent folder**, for example `%LOCALAPPDATA%\Programs\GamePass2Steam`. Keep all files together. No Node.js, pnpm, .NET installation, SDK, administrator privileges or build tools are needed.
@@ -50,7 +62,9 @@ dotnet run --project src/GamePass2Steam
 ./scripts/package.ps1
 ```
 
-The test executable uses isolated temporary profiles, not real Steam configuration. The packaging script runs tests and publishes all runtime files into a fresh staging directory, then creates a ZIP and SHA-256 in `dist`. Windows CI performs the same build and a packaged discovery smoke test in a path containing spaces and Unicode. CI does not verify a licensed game reaches its menu. Release artifacts are available from successful workflow runs; local `dist` is ignored by Git.
+The test executable uses isolated temporary profiles, not real Steam configuration. The packaging script runs tests and publishes all runtime files into a fresh staging directory, then creates a ZIP and SHA-256 in `dist`. Windows CI performs the same build and a packaged discovery smoke test in a path containing spaces and Unicode. CI does not verify a licensed game reaches its menu. Local `dist` is ignored by Git.
+
+Every successful push to `main` publishes a rolling **Latest main build** prerelease with a ZIP and checksum. When the project version has no release yet, the same pipeline also publishes an immutable versioned release (starting with `v0.1.0`). Increase `<Version>` in `src/GamePass2Steam/GamePass2Steam.csproj` for the next versioned release; existing versioned assets are never replaced. Pull requests build and test without publishing. Manual workflow runs publish only from `main`. See [AGENTS.md](AGENTS.md) for contribution rules and [release details](docs/wiki/Releases.md) for downloads and verification.
 
 CLI commands (run the EXE with `Start-Process -Wait -PassThru` in scripts because it is a Windows GUI executable):
 

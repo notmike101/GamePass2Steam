@@ -1,13 +1,19 @@
-name: Windows build and release artifact
+name: Windows build and publish
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -16,10 +22,16 @@ jobs:
       - name: Test and package self-contained app
         shell: pwsh
         run: ./scripts/package.ps1
+      - name: Read package version
+        id: version
+        shell: pwsh
+        run: |
+          $version = ([xml](Get-Content src/GamePass2Steam/GamePass2Steam.csproj -Raw)).Project.PropertyGroup.Version
+          "version=$version" >> $env:GITHUB_OUTPUT
       - name: Smoke test bundled runtime without SDK resolution
         shell: pwsh
         run: |
-          Expand-Archive dist/GamePass2Steam-0.1.0-win-x64.zip '${{ runner.temp }}/Game Pass Café'
+          Expand-Archive 'dist/GamePass2Steam-${{ steps.version.outputs.version }}-win-x64.zip' '${{ runner.temp }}/Game Pass Café'
           $exe = '${{ runner.temp }}/Game Pass Café/GamePass2Steam.exe'
           $report = '${{ runner.temp }}/discovery.json'
           $env:DOTNET_ROOT = '${{ runner.temp }}/no-runtime'
@@ -34,3 +46,50 @@ jobs:
           path: |
             dist/*.zip
             dist/*.sha256
+          if-no-files-found: error
+  publish:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: GamePass2Steam-win-x64
+          path: dist
+      - name: Publish versioned release and latest main build
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $archive = "dist/GamePass2Steam-$env:RELEASE_VERSION-win-x64.zip"
+          $expected = (Get-Content "$archive.sha256").Split(' ')[0]
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash -ne $expected) { throw 'Artifact checksum mismatch' }
+          $releases = gh release list --limit 1000 --json tagName,isDraft | ConvertFrom-Json
+          $tag = "v$env:RELEASE_VERSION"
+          $stable = $releases | Where-Object tagName -eq $tag
+          if ($stable.isDraft) { throw "Resolve the incomplete draft release $tag before retrying" }
+          $notes = "Windows x64 portable build from $env:GITHUB_SHA. Extract the entire ZIP into a permanent folder and run GamePass2Steam.exe. No separate .NET installation is needed. The application is unsigned. Installation, backups, compatibility and troubleshooting: https://github.com/$env:GH_REPO/wiki"
+          if (-not $stable) {
+            gh release create $tag $archive "$archive.sha256" --target $env:GITHUB_SHA --title "GamePass2Steam $env:RELEASE_VERSION" --notes $notes --generate-notes --latest
+          }
+          $rollingNotes = "Latest successful main build: $env:GITHUB_SHA. These assets and the main-build tag are replaced by subsequent successful builds. For a fixed version use the latest versioned release. $notes"
+          if ($releases.tagName -contains 'main-build') {
+            gh api --method PATCH "repos/$env:GH_REPO/git/refs/tags/main-build" -f "sha=$env:GITHUB_SHA" -F force=true
+            gh release upload main-build $archive "$archive.sha256" --clobber
+            gh release edit main-build --title 'Latest main build' --notes $rollingNotes --prerelease --latest=false
+            # Remove older version filenames after the replacement assets are uploaded.
+            $assets = gh release view main-build --json assets --jq '.assets[].name'
+            foreach ($asset in $assets) {
+              if ($asset -ne (Split-Path $archive -Leaf) -and $asset -ne ((Split-Path $archive -Leaf) + '.sha256')) {
+                gh release delete-asset main-build $asset --yes
+              }
+            }
+          } else {
+            gh release create main-build $archive "$archive.sha256" --target $env:GITHUB_SHA --title 'Latest main build' --notes $rollingNotes --prerelease --latest=false
+          }
