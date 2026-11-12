@@ -6,10 +6,12 @@ GamePass2Steam can fill missing artwork while adding or updating managed shortcu
 
 1. Sign in to [SteamGridDB](https://www.steamgriddb.com/) yourself and obtain your own key from [API preferences](https://www.steamgriddb.com/profile/preferences/api).
 2. In GamePass2Steam, open **Artwork settings…** and enter the key. It is masked and used only for this application session. Closing the app clears it; enter it again next time.
-3. Check **Fill missing SteamGridDB artwork**, select games, exit Steam and choose **Add / update selected**.
-4. If prompted, select the correct game or skip it. Reopen Steam after artwork processing finishes.
+3. Check **Fill missing SteamGridDB artwork**, select games, exit Steam and choose **Add / update selected**. Alternatively, explicitly accept the one-time Steam close/reopen offer. Artwork finishes while Steam is closed, before the automatic restart.
+4. If prompted, select the correct game or skip it. Reopen Steam after artwork processing finishes if you chose manual exit. Once shortcut writing begins, the shutdown-wait cancel button is disabled; you can still skip uncertain artwork matches.
 
 No shared/private API key ships in the application. There is no credential file to copy with the portable app. The feature uses the documented [SteamGridDB API](https://www.steamgriddb.com/api/v2) with an Authorization bearer header; credentials are sent only to the API, never to image downloads. The application does not log keys or raw server responses.
+
+![Artwork API key settings](https://raw.githubusercontent.com/notmike101/GamePass2Steam/main/docs/images/artwork-settings.png)
 
 Enabling artwork sends selected game titles and artwork requests to SteamGridDB. Ordinary imports stay offline. Respect the service's current account/API terms; a rejected key or rate limit stops further artwork requests for that operation. Retry later rather than repeatedly importing.
 

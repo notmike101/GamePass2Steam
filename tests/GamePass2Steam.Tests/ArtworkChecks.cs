@@ -16,6 +16,16 @@ internal static class ArtworkChecks
 
     public static void Run(Action<string, Action> check, Action<bool> assert, Action<Action> throws)
     {
+        check("Steam restart waits for asynchronous artwork completion and recovers async failure", () => {
+            foreach (bool fail in new[] {false,true}) {
+                bool running = true; List<string> events = [];
+                var operation = SteamImport.RunAsync(true,()=>running,()=>{running=false;events.Add("exit");},()=>{running=true;events.Add("restart");},async()=>{
+                    assert(!running); events.Add("shortcuts"); await Task.Yield(); assert(!running); events.Add("artwork"); if (fail) throw new IOException("artwork failed");
+                });
+                if (fail) throws(()=>operation.GetAwaiter().GetResult()); else operation.GetAwaiter().GetResult();
+                assert(events.SequenceEqual(new[]{"exit","shortcuts","artwork","restart"}) && running);
+            }
+        });
         check("artwork matching ignores punctuation but never guesses editions or ambiguous titles", () => {
             var game = new ArtworkGame(1,"Café Game: Two");
             assert(SteamGridDb.ExactMatch("CAFÉ Game™ - Two", [game]) == game);
