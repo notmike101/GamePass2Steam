@@ -57,6 +57,8 @@ Steam has no supported transactional API for non-Steam shortcuts. Do not start S
 
 ## Compatibility and troubleshooting
 
+If filtering encounters an unreadable or malformed shortcuts file, the status line shows the error. Repair the file or release its lock, then retry filtering.
+
 - **GDK / packaged Win32:** MicrosoftGame.config identifies the real game executable; Windows registration launches its normal bootstrapper. Custom drives/folders work through registration rather than a hardcoded XboxGames scan. Development-only executables are excluded.
 - **UWP:** registered applications with a manifest executable use the same activation API and executable/package matching. Xbox Live protocol metadata marks likely games. The optional full app list handles incomplete game metadata. Game Pass subscription ownership cannot be inferred from local registration: purchased Microsoft Store games may also appear.
 - Dependencies/resource packages and entries without Start-menu registration or a trackable executable are excluded. DLC without its own visible application is excluded. Visible DLC launchers cannot always be distinguished from games.
@@ -94,3 +96,5 @@ GamePass2Steam.exe --launch "PackageFamily!ApplicationId"
 ```
 
 Use the packaged EXE for real imports; importing through `dotnet run` would bind shortcuts to a development executable. The GUI exposes the same operations. Discovery reads only current-user registration. See [research and decisions](docs/RESEARCH.md), [implementation ledger](docs/PROGRESS.md) and [license notices](THIRD-PARTY-NOTICES.md).
+
+PNG response media types are matched without regard to case; image content is still validated before installation.
