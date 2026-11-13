@@ -44,7 +44,7 @@ public sealed class MainForm : Form
         AddButton("Artwork settings…", () => { artworkKey = ArtworkUi.Configure(this, artworkKey); return Task.CompletedTask; });
         AddButton("Open logs", () => { Directory.CreateDirectory(Log.DirectoryPath); Process.Start(new ProcessStartInfo(Log.DirectoryPath) { UseShellExecute = true }); return Task.CompletedTask; });
         layout.Controls.Add(actions); layout.Controls.Add(status); Controls.Add(layout);
-        search.TextChanged += (_, _) => { filterTimer.Stop(); filterTimer.Start(); }; allApps.CheckedChanged += (_, _) => Populate(); profiles.SelectedIndexChanged += (_, _) => { if (!busy) TryPopulate(); };
+        search.TextChanged += (_, _) => { filterTimer.Stop(); filterTimer.Start(); }; allApps.CheckedChanged += (_, _) => TryPopulate(); profiles.SelectedIndexChanged += (_, _) => { if (!busy) TryPopulate(); };
         filterTimer.Tick += (_, _) => { filterTimer.Stop(); TryPopulate(); };
         Disposed += (_, _) => filterTimer.Dispose();
         Shown += async (_, _) => await Execute(Initialize);
