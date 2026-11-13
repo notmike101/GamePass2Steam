@@ -7,7 +7,7 @@ public static class SteamShortcuts
     private const string Marker = "GamePass2Steam:";
     public static List<VdfNode> Entries(List<VdfNode> root)
     {
-        if (root.Count != 1 || root[0].Name != "shortcuts" || root[0].Type != 0) throw new InvalidDataException("Expected one shortcuts object.");
+        if (root.Count != 1 || !root[0].Name.Equals("shortcuts", StringComparison.OrdinalIgnoreCase) || root[0].Type != 0) throw new InvalidDataException("Expected one shortcuts object.");
         var entries = root[0].Children!;
         if (entries.GroupBy(e => e.Name).Any(g => g.Count() > 1)) throw new InvalidDataException("Duplicate shortcut entry indexes.");
         foreach (var entry in entries)
