@@ -80,6 +80,13 @@ internal static class ArtworkChecks
                 throws(() => api.Download(new(1,new("https://cdn2.steamgriddb.com/x"),"",0),default).GetAwaiter().GetResult());
             }
         });
+        check("non-JSON artwork responses have safe messages without response content", () => {
+            foreach (string body in new[] {"<html>" + Key + "</html>", "", "{", "null", "[]"}) {
+                using var http = new HttpClient(new Handler(_ => new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "text/html") }));
+                try { new SteamGridDb(http, Key).Search("Game", default).GetAwaiter().GetResult(); throw new Exception("Expected invalid response failure"); }
+                catch (ArtworkUnavailableException e) { assert(!e.ToString().Contains(Key) && !e.Stop); }
+            }
+        });
         check("artwork authentication rate limit and service failures have safe messages", () => {
             foreach (var status in new[] {HttpStatusCode.Unauthorized,HttpStatusCode.Forbidden,HttpStatusCode.TooManyRequests,HttpStatusCode.ServiceUnavailable}) {
                 using var http = new HttpClient(new Handler(_ => new(status) {Content = new StringContent(Key)}));
