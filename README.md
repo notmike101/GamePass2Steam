@@ -43,6 +43,8 @@ Each downloaded file has a `.gp2s-source.json` sidecar recording its source and 
 
 ## Updates and moving the app
 
+An invalid SteamGridDB API response is reported as an artwork service error without exposing its response body or your key. Retry artwork after resolving the connection or service problem.
+
 Exit GamePass2Steam and any game launched through it. Extract a new release over the same application folder, keeping `GamePass2Steam.exe` at the same absolute path. The shortcut contains a stable AUMID, so package-version/path changes are resolved again at launch. If you move this app, close Steam and re-import the games from the new location. Do not run directly inside the ZIP or delete the folder after importing.
 
 ## Backup and recovery
@@ -56,6 +58,8 @@ To restore, exit Steam, choose the same profile, select **Restore backup**, and 
 Steam has no supported transactional API for non-Steam shortcuts. Do not start Steam or another shortcut editor while saving. The app checks Steam both before and just before replacement, detects concurrent file changes, and serializes its own writers; this cannot prevent an unrelated process from writing in the final check/replace interval.
 
 ## Compatibility and troubleshooting
+
+If filtering encounters an unreadable or malformed shortcuts file, the status line shows the error. Repair the file or release its lock, then retry filtering.
 
 - **GDK / packaged Win32:** MicrosoftGame.config identifies the real game executable; Windows registration launches its normal bootstrapper. Custom drives/folders work through registration rather than a hardcoded XboxGames scan. Development-only executables are excluded.
 - **UWP:** registered applications with a manifest executable use the same activation API and executable/package matching. Xbox Live protocol metadata marks likely games. The optional full app list handles incomplete game metadata. Game Pass subscription ownership cannot be inferred from local registration: purchased Microsoft Store games may also appear.
@@ -94,3 +98,5 @@ GamePass2Steam.exe --launch "PackageFamily!ApplicationId"
 ```
 
 Use the packaged EXE for real imports; importing through `dotnet run` would bind shortcuts to a development executable. The GUI exposes the same operations. Discovery reads only current-user registration. See [research and decisions](docs/RESEARCH.md), [implementation ledger](docs/PROGRESS.md) and [license notices](THIRD-PARTY-NOTICES.md).
+
+PNG response media types are matched without regard to case; image content is still validated before installation.

@@ -41,8 +41,10 @@ Files are written through temporary files and installed without overwriting a de
 
 ## Errors and rights
 
-Authentication, network, invalid-image, unavailable-category, disk-write and rate-limit failures are reported separately from successful shortcut import. Some categories may have finished before a later failure. Retry to fill the remaining categories; custom art stays untouched. Icon-path updates use the existing backup and concurrency checks. Restoring a shortcut backup restores shortcut fields, not downloaded image files.
+Authentication, network, invalid-image, unavailable-category, disk-write and rate-limit failures are reported separately from successful shortcut import. Invalid API JSON is reported as a service error without exposing the response body or key. Some categories may have finished before a later failure. Retry to fill the remaining categories; custom art stays untouched. Icon-path updates use the existing backup and concurrency checks. Restoring a shortcut backup restores shortcut fields, not downloaded image files.
 
 Artwork remains subject to its creators' and other rights holders' rights. The project license covers application code, not downloaded artwork. Releases contain no SteamGridDB images or credentials. Preserve attribution records and check permissions before redistributing images; API access is not a blanket artwork redistribution license.
 
 Implementation references: [SteamGridDB API specification](https://www.steamgriddb.com/static/openapi.yml), [SteamGridDB artwork FAQ](https://www.steamgriddb.com/faq), and [SteamGridDB's SGDBoop file-placement implementation](https://github.com/SteamGridDB/SGDBoop/blob/main/sgdboop.c). No SGDBoop code is bundled into GamePass2Steam.
+
+PNG response media types are matched without regard to case; image content is still validated before installation.

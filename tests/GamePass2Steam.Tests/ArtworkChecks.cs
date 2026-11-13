@@ -52,6 +52,17 @@ internal static class ArtworkChecks
             throws(() => api.Download(asset with {Url = new Uri("https://example.com/image.png")},default).GetAwaiter().GetResult());
             assert(imageCalls == 1);
         });
+        check("artwork accepts mixed-case PNG media types without bypassing content validation", () => {
+            foreach (bool valid in new[] {true, false}) {
+                using var http = new HttpClient(new Handler(_ => new(HttpStatusCode.OK) {
+                    Content = new ByteArrayContent(valid ? Png : [1, 2, 3]) { Headers = { ContentType = new("Image/PNG") } }
+                }));
+                var api = new SteamGridDb(http, Key);
+                var asset = new ArtworkAsset(1, new("https://cdn2.steamgriddb.com/x"), "", 0);
+                if (valid) assert(api.Download(asset, default).GetAwaiter().GetResult().SequenceEqual(Png));
+                else throws(() => api.Download(asset, default).GetAwaiter().GetResult());
+            }
+        });
         check("artwork rejects untrusted URLs invalid PNG content and oversized responses", () => {
             foreach (string url in new[] {"http://cdn2.steamgriddb.com/x", "https://cdn2.steamgriddb.com.evil.test/x", "https://127.0.0.1/x", "https://user:pass@cdn2.steamgriddb.com/x", "https://cdn2.steamgriddb.com:8443/x"})
                 assert(!SteamGridDb.AllowedImageUri(new(url)));
@@ -67,6 +78,13 @@ internal static class ArtworkChecks
                 }));
                 var api = new SteamGridDb(http,Key);
                 throws(() => api.Download(new(1,new("https://cdn2.steamgriddb.com/x"),"",0),default).GetAwaiter().GetResult());
+            }
+        });
+        check("non-JSON artwork responses have safe messages without response content", () => {
+            foreach (string body in new[] {"<html>" + Key + "</html>", "", "{", "null", "[]"}) {
+                using var http = new HttpClient(new Handler(_ => new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "text/html") }));
+                try { new SteamGridDb(http, Key).Search("Game", default).GetAwaiter().GetResult(); throw new Exception("Expected invalid response failure"); }
+                catch (ArtworkUnavailableException e) { assert(!e.ToString().Contains(Key) && !e.Stop); }
             }
         });
         check("artwork authentication rate limit and service failures have safe messages", () => {

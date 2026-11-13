@@ -43,7 +43,7 @@ public sealed class MainForm : Form
         AddButton("Artwork settings…", () => { artworkKey = ArtworkUi.Configure(this, artworkKey); return Task.CompletedTask; });
         AddButton("Open logs", () => { Directory.CreateDirectory(Log.DirectoryPath); Process.Start(new ProcessStartInfo(Log.DirectoryPath) { UseShellExecute = true }); return Task.CompletedTask; });
         layout.Controls.Add(actions); layout.Controls.Add(status); Controls.Add(layout);
-        search.TextChanged += (_, _) => Populate(); allApps.CheckedChanged += (_, _) => Populate(); profiles.SelectedIndexChanged += (_, _) => { if (!busy) TryPopulate(); };
+        search.TextChanged += (_, _) => TryPopulate(); allApps.CheckedChanged += (_, _) => TryPopulate(); profiles.SelectedIndexChanged += (_, _) => { if (!busy) TryPopulate(); };
         Shown += async (_, _) => await Execute(Initialize);
         FormClosing += (_, e) => { if (importCancellation != null) { e.Cancel = true; if (!writingImport) importCancellation.Cancel(); status.Text = writingImport ? "Finishing shortcuts/artwork before reopening Steam. Please wait." : "Import canceled. Waiting for Steam shutdown recovery."; } };
     }
