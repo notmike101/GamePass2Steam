@@ -10,6 +10,16 @@ const string launcher = @"C:\Apps\Game Pass\GamePass2Steam.exe";
 // Independent wire fixture: object shortcuts, object 0, string appname=A, uint appid=0x80000001, nested empty tags.
 byte[] fixture = [0,115,104,111,114,116,99,117,116,115,0,0,48,0,1,97,112,112,110,97,109,101,0,65,0,2,97,112,112,105,100,0,1,0,0,128,0,116,97,103,115,0,8,8,8,8];
 Check("binary fixture round trips byte for byte", () => Assert(BinaryVdf.Write(BinaryVdf.Read(fixture)).SequenceEqual(fixture)));
+Check("shortcut root casing is accepted and preserved", () => {
+    var mixed = fixture.ToArray(); mixed[1] = (byte)'S';
+    var root = BinaryVdf.Read(mixed);
+    Assert(SteamShortcuts.Entries(root).Count == 1);
+    Assert(BinaryVdf.Write(root).SequenceEqual(mixed));
+    SteamShortcuts.Update(root, [game], launcher, false);
+    Assert(root[0].Name == "Shortcuts");
+    Throws(() => SteamShortcuts.Entries([root[0], root[0]]));
+    Throws(() => SteamShortcuts.Entries([VdfNode.String("Shortcuts", "wrong type")]));
+});
 Check("reject truncated, trailing, unknown type and deep data", () => {
     Throws(() => BinaryVdf.Read(fixture[..^1]));
     Throws(() => BinaryVdf.Read([..fixture, 0]));
@@ -22,6 +32,17 @@ Check("preserve unrelated scalar types and nested metadata", () => {
     var before = BinaryVdf.Write(root[0].Children!);
     SteamShortcuts.Update(root, [game], launcher, false);
     Assert(BinaryVdf.Write([root[0].Children![0]]).SequenceEqual(before));
+});
+Check("terminated VDF fields handle long UTF8 empty and unterminated strings", () => {
+    string longName = string.Concat(Enumerable.Repeat("Café", 2048));
+    var bytes = BinaryVdf.Write([VdfNode.String(longName, longName), VdfNode.String("", "")]);
+    var parsed = BinaryVdf.Read(bytes);
+    Assert(parsed[0].Name == longName && Encoding.UTF8.GetString(parsed[0].Data!) == longName);
+    Assert(parsed[1].Name == "" && parsed[1].Data!.Length == 0);
+    Assert(BinaryVdf.Write(parsed).SequenceEqual(bytes));
+    Throws(() => BinaryVdf.Read([1, (byte)'a']));
+    Throws(() => BinaryVdf.Read([1, (byte)'a', 0, (byte)'b']));
+    Throws(() => BinaryVdf.Read([1, 0xff, 0, 0, 8]));
 });
 Check("repeat import updates location without duplication or erasing user fields", () => {
     var root = BinaryVdf.Read(fixture);

@@ -21,6 +21,7 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
         ProcessChecks.Run();
+        CheckFilterErrors();
         var choose = typeof(MainForm).Assembly.GetType("GamePass2Steam.ArtworkUi")!.GetMethod("Choose", BindingFlags.Static | BindingFlags.NonPublic)!;
         foreach (var status in new[] { HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden, HttpStatusCode.TooManyRequests })
         foreach (string query in new[] { "Another title", "123" })
@@ -58,10 +59,50 @@ internal static class Program
             { Console.Error.WriteLine(failure?.ToString() ?? "FAIL chooser did not stop cleanly after one request"); return 1; }
             Console.WriteLine($"PASS chooser propagates HTTP {(int)status} from {(query == "123" ? "ID" : "title")} search and closes");
         }
-        Console.WriteLine("7 Windows UI/native checks passed");
+        Console.WriteLine("8 Windows UI/native checks passed");
         return 0;
     }
 
     private static IEnumerable<Control> Descendants(Control parent) => parent.Controls.Cast<Control>()
         .SelectMany(child => new[] { child }.Concat(Descendants(child)));
+
+    private static void CheckFilterErrors()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "gp2s-filter-" + Guid.NewGuid());
+        string config = Path.Combine(directory, "userdata", "1", "config");
+        Directory.CreateDirectory(config);
+        try
+        {
+            using var form = new MainForm();
+            var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            typeof(MainForm).GetField("steam", flags)!.SetValue(form, directory);
+            var profile = Descendants(form).OfType<ComboBox>().Single();
+            profile.Items.Add(new SteamProfile("1", null)); profile.SelectedIndex = 0;
+            var search = Descendants(form).OfType<TextBox>().Single();
+            var allApps = Descendants(form).OfType<CheckBox>().Single(c => c.Text == "Include other registered apps");
+            var status = (Label)typeof(MainForm).GetField("status", flags)!.GetValue(form)!;
+            void WaitForError()
+            {
+                var deadline = DateTime.UtcNow.AddSeconds(3);
+                while (status.Text.Length == 0 && DateTime.UtcNow < deadline) { Application.DoEvents(); Thread.Sleep(10); }
+                if (status.Text.Length == 0) throw new Exception("Missing shortcut-file filter error");
+            }
+            string path = Path.Combine(config, "shortcuts.vdf");
+            File.WriteAllBytes(path, BinaryVdf.Write([VdfNode.Object("shortcuts")]));
+            using (var locked = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                search.Text = "test";
+                WaitForError();
+                status.Text = ""; allApps.Checked = true;
+                WaitForError();
+            }
+            File.WriteAllBytes(path, [0, 1]);
+            status.Text = ""; search.Clear();
+            WaitForError();
+            File.WriteAllBytes(path, BinaryVdf.Write([VdfNode.Object("shortcuts")]));
+            search.Text = "recovered";
+            Console.WriteLine("PASS filters contain locked and malformed shortcut errors and remain usable");
+        }
+        finally { Directory.Delete(directory, true); }
+    }
 }

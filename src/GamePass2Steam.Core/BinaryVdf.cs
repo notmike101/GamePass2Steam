@@ -19,7 +19,7 @@ public static class BinaryVdf
         using var reader = new BinaryReader(new MemoryStream(bytes), Utf8);
         try
         {
-            var result = ReadObject(reader, 0);
+            var result = ReadObject(reader, bytes, 0);
             if (reader.BaseStream.Position != bytes.Length) throw new InvalidDataException("Trailing shortcut data.");
             return result;
         }
@@ -27,7 +27,7 @@ public static class BinaryVdf
         { throw new InvalidDataException("Truncated or invalid shortcut data; original file was not changed.", e); }
     }
 
-    private static List<VdfNode> ReadObject(BinaryReader reader, int depth)
+    private static List<VdfNode> ReadObject(BinaryReader reader, byte[] bytes, int depth)
     {
         if (depth > 32) throw new InvalidDataException("Shortcut nesting exceeds safety limit.");
         List<VdfNode> result = [];
@@ -35,10 +35,10 @@ public static class BinaryVdf
         {
             byte type = reader.ReadByte();
             if (type == 8) return result;
-            string name = Utf8.GetString(ReadTerminated(reader));
-            if (type == 0) { result.Add(new(0, name, Children: ReadObject(reader, depth + 1))); continue; }
+            string name = Utf8.GetString(ReadTerminated(reader, bytes));
+            if (type == 0) { result.Add(new(0, name, Children: ReadObject(reader, bytes, depth + 1))); continue; }
             byte[] data;
-            if (type == 1) data = ReadTerminated(reader);
+            if (type == 1) data = ReadTerminated(reader, bytes);
             else
             {
                 int length = type switch { 2 or 3 or 4 or 6 => 4, 7 or 10 => 8, _ => throw new InvalidDataException($"Unsupported binary VDF type {type}; file was not changed.") };
@@ -49,12 +49,13 @@ public static class BinaryVdf
         }
     }
 
-    private static byte[] ReadTerminated(BinaryReader reader)
+    private static byte[] ReadTerminated(BinaryReader reader, byte[] bytes)
     {
-        using var data = new MemoryStream();
-        byte b;
-        while ((b = reader.ReadByte()) != 0) data.WriteByte(b);
-        return data.ToArray();
+        int start = checked((int)reader.BaseStream.Position);
+        int length = bytes.AsSpan(start).IndexOf((byte)0);
+        if (length < 0) throw new EndOfStreamException();
+        reader.BaseStream.Position = start + length + 1;
+        return bytes.AsSpan(start, length).ToArray();
     }
 
     public static byte[] Write(List<VdfNode> nodes)
