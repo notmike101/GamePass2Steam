@@ -100,7 +100,7 @@ public sealed class SteamGridDb(HttpClient http, string key)
                 throw new ArtworkUnavailableException("SteamGridDB rejected the API key. Check Artwork settings.", true);
             if ((int)response.StatusCode == 429) throw new ArtworkUnavailableException("SteamGridDB rate limit reached. Try again later.", true);
             if (!response.IsSuccessStatusCode) throw new ArtworkUnavailableException($"SteamGridDB request failed (HTTP {(int)response.StatusCode}).");
-            if (image && response.Content.Headers.ContentType?.MediaType != "image/png") throw new InvalidDataException("Artwork was not a PNG image.");
+            if (image && !string.Equals(response.Content.Headers.ContentType?.MediaType, "image/png", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Artwork was not a PNG image.");
             if (response.Content.Headers.ContentLength > limit) throw new InvalidDataException("Artwork response exceeds size limit.");
             await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
             using var output = new MemoryStream(); byte[] buffer = new byte[8192]; int count;
