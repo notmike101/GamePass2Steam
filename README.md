@@ -49,6 +49,8 @@ Exit GamePass2Steam and any game launched through it. Extract a new release over
 
 ## Backup and recovery
 
+Shortcut field names, including the root `shortcuts` name, are accepted case-insensitively and retain their original spelling when saved.
+
 Shortcut changes affect `<Steam>\userdata\<profile>\config\shortcuts.vdf`. Existing files are backed up beside it as `shortcuts.vdf.gp2s-<UTC timestamp>-<unique>.bak`. Writes use a flushed temporary file and atomic Windows replacement. The first creation has no old file to back up. An unchanged import creates no new backup. Keep backups until satisfied with the result; they are not automatically pruned. Optional artwork is saved separately in that profile's `config/grid`; shortcut backups do not include image files.
 
 To restore, exit Steam, choose the same profile, select **Restore backup**, and select the desired `.bak`. Restoration replaces the complete shortcut snapshot and first backs up the current file. Alternatively, with Steam closed, copy the current file somewhere safe and copy the chosen backup to `shortcuts.vdf`. Restore does not affect game installations or saves. If the original file is malformed and the app refuses restoration, use this manual copy procedure. Unknown binary types and malformed input are refused instead of overwritten.
