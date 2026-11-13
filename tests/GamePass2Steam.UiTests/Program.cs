@@ -80,18 +80,24 @@ internal static class Program
             var search = Descendants(form).OfType<TextBox>().Single();
             var allApps = Descendants(form).OfType<CheckBox>().Single(c => c.Text == "Include other registered apps");
             var status = (Label)typeof(MainForm).GetField("status", flags)!.GetValue(form)!;
+            void WaitForError()
+            {
+                var deadline = DateTime.UtcNow.AddSeconds(3);
+                while (status.Text.Length == 0 && DateTime.UtcNow < deadline) { Application.DoEvents(); Thread.Sleep(10); }
+                if (status.Text.Length == 0) throw new Exception("Missing shortcut-file filter error");
+            }
             string path = Path.Combine(config, "shortcuts.vdf");
             File.WriteAllBytes(path, BinaryVdf.Write([VdfNode.Object("shortcuts")]));
             using (var locked = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
                 search.Text = "test";
-                if (status.Text.Length == 0) throw new Exception("Missing locked-file filter error");
+                WaitForError();
                 status.Text = ""; allApps.Checked = true;
-                if (status.Text.Length == 0) throw new Exception("Missing locked-file checkbox error");
+                WaitForError();
             }
             File.WriteAllBytes(path, [0, 1]);
             status.Text = ""; search.Clear();
-            if (status.Text.Length == 0) throw new Exception("Missing malformed-file filter error");
+            WaitForError();
             File.WriteAllBytes(path, BinaryVdf.Write([VdfNode.Object("shortcuts")]));
             search.Text = "recovered";
             Console.WriteLine("PASS filters contain locked and malformed shortcut errors and remain usable");
