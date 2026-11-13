@@ -10,6 +10,8 @@ The optional import waits up to 60 seconds. If Steam refuses to exit or times ou
 
 ## My game is missing
 
+If Windows supplies no display name, the app appears under its application identity instead; a discovery warning records the fallback.
+
 Choose **Refresh**, clear the search field and try **Include other registered apps**. Confirm the game is installed for this Windows account and opens from Xbox. **Find game folder** can match its install folder or Content folder to a registered application. It cannot add an unregistered executable or make an external launcher game compatible. Check [Compatibility](Compatibility).
 
 ## It opens from Xbox but not from Steam
