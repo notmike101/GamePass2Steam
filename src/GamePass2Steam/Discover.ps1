@@ -15,7 +15,9 @@ foreach ($package in Get-AppxPackage) {
         $configPath = Join-Path $package.InstallLocation 'MicrosoftGame.config'
         $config = if ([IO.File]::Exists($configPath)) { [IO.File]::ReadAllText($configPath) } else { $null }
         foreach ($id in $ids) {
-            $items.Add(@{ Id=$id; Name=$start[$id]; Family=$package.PackageFamilyName; InstallPath=$package.InstallLocation; Manifest=$manifest; Config=$config })
+            $name = $start[$id]
+            if ([string]::IsNullOrWhiteSpace($name)) { $name = $id; $warnings.Add($id + ': missing display name; using application identity.') }
+            $items.Add(@{ Id=$id; Name=$name; Family=$package.PackageFamilyName; InstallPath=$package.InstallLocation; Manifest=$manifest; Config=$config })
         }
     } catch { $warnings.Add($package.Name + ': ' + $_.Exception.Message) }
 }
