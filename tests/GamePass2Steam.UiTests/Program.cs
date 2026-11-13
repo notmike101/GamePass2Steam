@@ -20,6 +20,7 @@ internal static class Program
     private static int Main()
     {
         ApplicationConfiguration.Initialize();
+        ProcessChecks.Run();
         CheckFilterErrors();
         var choose = typeof(MainForm).Assembly.GetType("GamePass2Steam.ArtworkUi")!.GetMethod("Choose", BindingFlags.Static | BindingFlags.NonPublic)!;
         foreach (var status in new[] { HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden, HttpStatusCode.TooManyRequests })
@@ -58,7 +59,7 @@ internal static class Program
             { Console.Error.WriteLine(failure?.ToString() ?? "FAIL chooser did not stop cleanly after one request"); return 1; }
             Console.WriteLine($"PASS chooser propagates HTTP {(int)status} from {(query == "123" ? "ID" : "title")} search and closes");
         }
-        Console.WriteLine("7 Windows UI checks passed");
+        Console.WriteLine("8 Windows UI/native checks passed");
         return 0;
     }
 
