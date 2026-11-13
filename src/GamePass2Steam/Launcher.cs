@@ -38,9 +38,28 @@ public static class Log
 {
     public static readonly string DirectoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GamePass2Steam", "logs");
     private static readonly string FilePath = Path.Combine(DirectoryPath, DateTime.UtcNow.ToString("yyyyMMddTHHmmss") + "-" + Environment.ProcessId + ".log");
+    private static bool pruned;
     public static void Write(string message)
     {
         Directory.CreateDirectory(DirectoryPath);
+        if (!pruned) { Prune(DirectoryPath, DateTime.UtcNow.AddDays(-30)); pruned = true; }
         File.AppendAllText(FilePath, DateTime.UtcNow.ToString("O") + " " + message + Environment.NewLine);
+    }
+    private static void Prune(string directory, DateTime cutoff)
+    {
+        try
+        {
+            if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0) return;
+            foreach (string file in Directory.EnumerateFiles(directory, "*.log"))
+            {
+                if (!System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(file), @"\A[0-9]{8}T[0-9]{6}-[0-9]+\.log\z")) continue;
+                try
+                {
+                    if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) == 0 && File.GetLastWriteTimeUtc(file) < cutoff) File.Delete(file);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
     }
 }

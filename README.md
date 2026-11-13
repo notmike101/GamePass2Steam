@@ -61,6 +61,8 @@ Steam has no supported transactional API for non-Steam shortcuts. Do not start S
 
 ## Compatibility and troubleshooting
 
+On the first log write in each app process, matching application logs last modified more than 30 days ago are pruned on a best-effort basis. Unrelated files, reparse points and shortcut backups are excluded.
+
 Registrations with a missing display name appear under their application identity and produce a discovery warning.
 If filtering encounters an unreadable or malformed shortcuts file, the status line shows the error. Repair the file or release its lock, then retry filtering.
 

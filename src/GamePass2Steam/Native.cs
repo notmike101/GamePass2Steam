@@ -59,13 +59,15 @@ internal static class Native
     {
         List<int> matches = [];
         var visible = game.Kind == "UWP" ? VisibleProcesses() : [];
-        foreach (var process in Process.GetProcesses())
+        var path = new StringBuilder(32768);
+        foreach (string name in game.Executables.Select(e => Path.GetFileNameWithoutExtension(e)).Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (var process in Process.GetProcessesByName(name))
         {
             using (process)
             using (var handle = OpenProcess(0x1000, false, process.Id))
             {
                 if (handle.IsInvalid) continue;
-                var path = new StringBuilder(32768); uint size = (uint)path.Capacity;
+                path.Clear(); uint size = (uint)path.Capacity;
                 if (!QueryFullProcessImageName(handle, 0, path, ref size)) continue;
                 string value = path.ToString();
                 bool exact = game.Executables.Contains(value, StringComparer.OrdinalIgnoreCase);
