@@ -97,7 +97,7 @@ internal static class ArtworkChecks
                 foreach (string file in new[] {"3456789012.png","3456789012_hero.png","3456789012_logo.png"}) assert(File.ReadAllBytes(Path.Combine(grid,file)).SequenceEqual(Png));
                 assert(File.ReadAllBytes(Path.Combine(grid,"3456789012p.jpg")).SequenceEqual(custom));
                 assert(File.ReadAllBytes(vdf).SequenceEqual(before)); assert(!Directory.EnumerateFiles(other).Any());
-                assert(ArtworkInstaller.RememberedMatch(store,game.Id)?.Id == 123);
+                assert(ArtworkInstaller.RememberedMatch(store,game.Id.ToUpperInvariant())?.Id == 123);
                 result = installer.Fill(store,game.Id,new(123,"Game"),default).GetAwaiter().GetResult();
                 assert(result.Installed == 0 && requests == 6 && !ArtworkInstaller.Missing(store,game.Id));
                 assert(File.ReadAllText(Path.Combine(grid,"3456789012_logo.png.gp2s-source.json")).Contains("Test Artist"));
@@ -111,7 +111,7 @@ internal static class ArtworkChecks
                 int requests = 0;
                 using var http = new HttpClient(new Handler(r=>{requests++; return r.RequestUri!.Host == "www.steamgriddb.com" ? Asset() : Image();}));
                 var installer = new ArtworkInstaller(new(http,Key),()=>false,SteamGridDb.ValidatePng);
-                assert(installer.Fill(store,game.Id,new(123,"Game"),default).GetAwaiter().GetResult().Installed == 5);
+                assert(installer.Fill(store,game.Id.ToLowerInvariant(),new(123,"Game"),default).GetAwaiter().GetResult().Installed == 5);
                 var entry = SteamShortcuts.Entries(store.Read()).Single(); string icon = entry.Text("icon")!;
                 assert(File.Exists(icon) && Path.GetFileName(icon).EndsWith("_icon.png") && Directory.GetFiles(directory,"*.bak").Length == 1);
                 assert(!ArtworkInstaller.Missing(store,game.Id));

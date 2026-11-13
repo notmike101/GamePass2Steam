@@ -82,9 +82,9 @@ public sealed class MainForm : Form
     private void TryPopulate() { try { Populate(); } catch (Exception e) { status.Text = e.Message; } }
     private void Populate()
     {
-        var selected = grid.Rows.Cast<DataGridViewRow>().Where(r => r.Cells[0].Value is true).Select(r => ((Game)r.Tag!).Id).ToHashSet();
-        var managed = profiles.SelectedItem != null ? SteamShortcuts.Entries(Store().Read()).Where(e => SteamShortcuts.ManagedId(e) != null).ToDictionary(e => SteamShortcuts.ManagedId(e)!, e => e.Text("appname") ?? "Missing game") : [];
-        var display = games.Concat(managed.Where(p => games.All(g => g.Id != p.Key)).Select(p => new Game(p.Key, p.Value, "", "Not installed / refresh to repair", [], "Missing registration", false)));
+        var selected = grid.Rows.Cast<DataGridViewRow>().Where(r => r.Cells[0].Value is true).Select(r => ((Game)r.Tag!).Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var managed = profiles.SelectedItem != null ? SteamShortcuts.Entries(Store().Read()).Where(e => SteamShortcuts.ManagedId(e) != null).ToDictionary(e => SteamShortcuts.ManagedId(e)!, e => e.Text("appname") ?? "Missing game", StringComparer.OrdinalIgnoreCase) : [];
+        var display = games.Concat(managed.Where(p => games.All(g => !g.Id.Equals(p.Key, StringComparison.OrdinalIgnoreCase))).Select(p => new Game(p.Key, p.Value, "", "Not installed / refresh to repair", [], "Missing registration", false)));
         grid.Rows.Clear();
         foreach (var game in display.Where(g => (allApps.Checked || g.LikelyGame || managed.ContainsKey(g.Id)) && g.Name.Contains(search.Text, StringComparison.OrdinalIgnoreCase)))
         {
@@ -152,7 +152,7 @@ public sealed class MainForm : Form
         using var dialog = new FolderBrowserDialog { Description = "Select an Xbox game installation or its Content folder", UseDescriptionForTitle = true };
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
-            var ids = Discovery.MatchFolder(dialog.SelectedPath, games).Select(g => g.Id).ToHashSet();
+            var ids = Discovery.MatchFolder(dialog.SelectedPath, games).Select(g => g.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
             allApps.Checked = true; search.Clear(); Populate();
             foreach (DataGridViewRow row in grid.Rows) if (ids.Contains(((Game)row.Tag!).Id)) { row.Cells[0].Value = true; grid.FirstDisplayedScrollingRowIndex = row.Index; }
             status.Text = "Matched the folder to its registered Windows identity. Use Add / update selected.";

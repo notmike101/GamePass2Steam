@@ -8,7 +8,7 @@ public static class Launcher
     public static async Task Run(string id)
     {
         GameMetadata.ValidateIdentity(id);
-        string name = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(id)))[..24];
+        string name = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(id.ToUpperInvariant())))[..24];
         using var mutex = new Mutex(false, @"Local\GamePass2Steam-" + name);
         bool owned;
         try { owned = mutex.WaitOne(0); } catch (AbandonedMutexException) { owned = true; }
@@ -16,9 +16,9 @@ public static class Launcher
         // Mutex ownership is thread-affine; keep the owner alive until the process exits, without releasing on an async continuation.
         Log.Write("Resolving " + id);
         var result = await Discovery.Scan();
-        var game = result.Games.SingleOrDefault(g => g.Id == id) ?? throw new IOException("Game is no longer registered for this Windows user. Repair it in Xbox, then refresh and re-import.");
+        var game = result.Games.SingleOrDefault(g => g.Id.Equals(id, StringComparison.OrdinalIgnoreCase)) ?? throw new IOException("Game is no longer registered for this Windows user. Repair it in Xbox, then refresh and re-import.");
         if (Native.GameProcesses(game).Count != 0) throw new IOException("The game is already running. Exit it before launching from Steam so Steam can track this session.");
-        uint bootstrap = Native.Activate(id);
+        uint bootstrap = Native.Activate(game.Id);
         Log.Write($"Activated {id}; activation PID {bootstrap}; targets {string.Join("; ", game.Executables)}");
         var watch = Stopwatch.StartNew(); var tracker = new SessionTracker(); string previous = "";
         while (true)

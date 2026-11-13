@@ -43,6 +43,30 @@ Check("reject malformed shortcut root and duplicate critical fields", () => {
     var root=BinaryVdf.Read(fixture); root[0].Children![0].Children!.Add(VdfNode.String("appname", "B"));
     Throws(()=>SteamShortcuts.Update(root,[game],launcher,false));
 });
+Check("identity casing updates and removes the same shortcut without changing user metadata", () => {
+    var root = BinaryVdf.Read(fixture);
+    SteamShortcuts.Update(root, [game], launcher, false);
+    var entry = SteamShortcuts.Entries(root).Last();
+    byte[] appId = entry.Children!.Single(n => n.Name == "appid").Data!.ToArray();
+    var variant = game with { Id = game.Id.ToLowerInvariant(), Name = "Changed display name" };
+    SteamShortcuts.Update(root, [variant, game], @"D:\Moved\app.exe", false);
+    Assert(SteamShortcuts.Entries(root).Count == 2);
+    Assert(entry.Text("appname") == game.Name && entry.Text("Exe") == "\"D:\\Moved\\app.exe\"");
+    Assert(entry.Children!.Single(n => n.Name == "appid").Data!.SequenceEqual(appId));
+    Assert(SteamShortcuts.ManagedId(entry) == game.Id);
+    SteamShortcuts.Update(root, [variant], launcher, true);
+    Assert(BinaryVdf.Write(root).SequenceEqual(fixture));
+});
+Check("case-variant duplicate ownership is refused before a shortcut is changed", () => {
+    var root = BinaryVdf.Read(fixture);
+    SteamShortcuts.Update(root, [game], launcher, false);
+    var duplicate = BinaryVdf.Read(BinaryVdf.Write([root[0].Children!.Last()])).Single() with { Name = "2" };
+    duplicate.Children!.Single(n => n.Name == "tags").Children![0] = VdfNode.String("0", "GamePass2Steam:" + game.Id.ToUpperInvariant());
+    root[0].Children!.Add(duplicate);
+    byte[] before = BinaryVdf.Write(root);
+    Throws(() => SteamShortcuts.Update(root, [game], launcher, false));
+    Assert(BinaryVdf.Write(root).SequenceEqual(before));
+});
 Check("reject unsafe identity and command line input", () => {
     Throws(()=>SteamShortcuts.Update(BinaryVdf.Read(fixture),[game with { Id="bad\" --evil" }],launcher,false));
     Throws(()=>SteamShortcuts.Update(BinaryVdf.Read(fixture),[game],"bad\"path",false));
@@ -86,7 +110,7 @@ Check("concurrent changes detected before replacement", () => {
 });
 Check("GDK metadata distinguishes game from bootstrap and excludes dev executables", () => {
     string xml="<Game><ExecutableList><Executable Id='Play' Name='bin/Game.exe'/><Executable Id='Dev' Name='tools.exe' IsDevOnly='true'/></ExecutableList></Game>";
-    Assert(GameMetadata.Executables(xml,"Play",@"C:\Games\Café").Single().EndsWith(Path.Combine("bin","Game.exe")));
+    Assert(GameMetadata.Executables(xml,"play",@"C:\Games\Café").Single().EndsWith(Path.Combine("bin","Game.exe")));
     Assert(GameMetadata.Executables(xml,"Dev",@"C:\Games\Café").Count==0);
     Throws(()=>GameMetadata.Executables("<Game><ExecutableList><Executable Id='Play' Name='../escape.exe'/></ExecutableList></Game>","Play",@"C:\Games\Café"));
     Throws(()=>GameMetadata.Executables("<!DOCTYPE Game [<!ENTITY e SYSTEM 'file:///secret'>]><Game>&e;</Game>","Play",@"C:\Games"));

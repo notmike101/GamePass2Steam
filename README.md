@@ -43,6 +43,8 @@ Each downloaded file has a `.gp2s-source.json` sidecar recording its source and 
 
 ## Updates and moving the app
 
+Registered application and package identities are matched without regard to case. Re-importing a differently cased identity preserves the existing shortcut's AppID, ownership tag and user metadata.
+
 Exit GamePass2Steam and any game launched through it. Extract a new release over the same application folder, keeping `GamePass2Steam.exe` at the same absolute path. The shortcut contains a stable AUMID, so package-version/path changes are resolved again at launch. If you move this app, close Steam and re-import the games from the new location. Do not run directly inside the ZIP or delete the folder after importing.
 
 ## Backup and recovery

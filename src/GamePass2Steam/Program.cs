@@ -25,7 +25,7 @@ internal static class Program
                     var games = Discovery.Scan().GetAwaiter().GetResult().Games;
                     string id = Value(command);
                     GameMetadata.ValidateIdentity(id);
-                    var game = games.SingleOrDefault(g => g.Id == id) ?? (command == "--remove" ? new Game(id, id, "", "", [], "", false) : throw new IOException("Game not found; run --discover."));
+                    var game = games.SingleOrDefault(g => g.Id.Equals(id, StringComparison.OrdinalIgnoreCase)) ?? (command == "--remove" ? new Game(id, id, "", "", [], "", false) : throw new IOException("Game not found; run --discover."));
                     var store = new ShortcutStore(Discovery.ProfilePath(Discovery.SteamPath(), Value("--profile")), Discovery.SteamRunning);
                     Output(new { Backup = store.Apply([game], Environment.ProcessPath!, command == "--remove") }); break;
                 case "--restore":

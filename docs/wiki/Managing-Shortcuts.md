@@ -26,3 +26,5 @@ Writes use a flushed temporary file and atomic replacement. Malformed input and 
 Restore replaces the **entire shortcut snapshot**, including other non-Steam shortcuts as they existed in that backup. It first backs up the current file. It does not affect installed games or saves.
 
 If a malformed current file prevents the app from restoring, close Steam, manually copy the current `shortcuts.vdf` somewhere safe, and copy the chosen backup over `shortcuts.vdf`. Retain the `.bak` source until you have checked the result.
+
+Application identities are compared case-insensitively. A registration casing change updates the same managed shortcut and preserves its stored AppID and user metadata. Ambiguous duplicate ownership is still refused.
