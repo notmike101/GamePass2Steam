@@ -43,6 +43,11 @@ The final release binaries (informational version `0.1.0+181908f`) were installe
 
 No real UWP game, second GDK title, external publisher launcher, protected/elevated game, Windows 10 machine, ARM64 machine or clean machine without an SDK was tested. Runtime files are bundled, and CI sets DOTNET_ROOT to a nonexistent directory for its packaged smoke test. No extended gameplay, save/load, game update/relocation, controller, overlay or streaming test was performed. The two-minute menu session establishes the first acceptance case, not broad catalog compatibility.
 
+## Targeted launch discovery audit (2026-11-13)
+
+On Windows with State of Decay 2 (GDK / packaged Win32) installed, three sequential full/targeted `Discovery.Scan` comparisons returned identical game metadata. Full discovery returned 42 games/apps in 1902, 1681 and 1640 ms; targeted discovery returned one in 1399, 1355 and 1363 ms. These are local end-to-end discovery samples, not Steam Play latency or broad performance guarantees.
+
+The changed development launcher activated this registered game, tracked its actual game PID, and reached the title screen. Quit was selected from the game UI. The game disappeared at 16:23:10.983 UTC and the launcher logged completion at 16:23:14.107 UTC (about 3.1 seconds later). Steam remained running throughout. This was a direct CLI launch with no shortcut import or Steam Play invocation, so Steam game presence, Overlay, Input, Remote Play and gameplay/save behavior were not verified. The PowerShell 5.1 targeted-discovery regression and Release build also passed.
 ## Audit polling regression (2026-11-13)
 
 The launcher now enumerates candidates by distinct declared executable basenames and reuses one 32K path buffer per poll. Windows native regression checks verified case-insensitive matching of the test executable, duplicate-name suppression, rejection of the same filename in a wrong directory, detection of a real child process, and disappearance after its normal exit. All eight UI/native checks passed. Full game activation, UWP windows, Steam presence, and allocation throughput have not been measured for this change; prior game acceptance results do not validate it.
