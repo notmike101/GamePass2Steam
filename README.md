@@ -92,3 +92,5 @@ GamePass2Steam.exe --launch "PackageFamily!ApplicationId"
 ```
 
 Use the packaged EXE for real imports; importing through `dotnet run` would bind shortcuts to a development executable. The GUI exposes the same operations. Discovery reads only current-user registration. See [research and decisions](docs/RESEARCH.md), [implementation ledger](docs/PROGRESS.md) and [license notices](THIRD-PARTY-NOTICES.md).
+
+PNG response media types are matched without regard to case; image content is still validated before installation.
