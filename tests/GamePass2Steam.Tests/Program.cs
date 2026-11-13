@@ -101,6 +101,85 @@ Check("session waits for real game, follows handoff, exits and bounds failure", 
     Assert(s.Observe(TimeSpan.FromSeconds(57),false)==SessionState.Exited);
     Assert(new SessionTracker().Observe(TimeSpan.FromSeconds(121),false)==SessionState.Failed);
 });
+ArtworkChecks.Run(Check, Assert, Throws);
+Check("Steam import requires per-operation authorization and leaves closed Steam closed", () => {
+    int exits = 0, starts = 0, writes = 0;
+    Throws(() => SteamImport.Run(false, () => true, () => exits++, () => starts++, () => writes++).GetAwaiter().GetResult());
+    Assert(exits == 0 && starts == 0 && writes == 0);
+    SteamImport.Run(false, () => false, () => exits++, () => starts++, () => writes++).GetAwaiter().GetResult();
+    Assert(exits == 0 && starts == 0 && writes == 1);
+    SteamImport.Run(true, () => false, () => exits++, () => starts++, () => writes++).GetAwaiter().GetResult();
+    Assert(exits == 0 && starts == 1 && writes == 2); // Steam exited between consent and execution.
+});
+Check("Steam import waits for exit and restarts after success or write failure", () => {
+    foreach (bool fail in new[] {false, true}) {
+        bool running = true; int waits = 0, starts = 0, writes = 0;
+        async Task Run() => await SteamImport.Run(true, () => running, () => {}, () => { starts++; running = true; },
+            () => { Assert(!running); writes++; if (fail) throw new IOException("write failed"); },
+            wait: () => { if (++waits == 3) running = false; return Task.CompletedTask; });
+        if (fail) Throws(() => Run().GetAwaiter().GetResult()); else Run().GetAwaiter().GetResult();
+        Assert(waits == 3 && writes == 1 && starts == 1 && running);
+    }
+});
+Check("Steam shutdown timeout never imports or kills a running client", () => {
+    int waits = 0, writes = 0, starts = 0;
+    Throws(() => SteamImport.Run(true, () => true, () => {}, () => starts++, () => writes++,
+        wait: () => { waits++; return Task.CompletedTask; }).GetAwaiter().GetResult());
+    Assert(waits == 120 && writes == 0 && starts == 0);
+});
+Check("canceling a Steam import still recovers a completed shutdown without writing", () => {
+    bool running = true; int starts = 0, writes = 0, waits = 0; using var cancellation = new CancellationTokenSource();
+    try {
+        SteamImport.Run(true, () => running, () => {}, () => starts++, () => writes++, cancellation.Token,
+            () => { cancellation.Cancel(); if (++waits == 2) running = false; return Task.CompletedTask; }).GetAwaiter().GetResult();
+        throw new Exception("Expected cancellation");
+    } catch (OperationCanceledException) { }
+    Assert(writes == 0 && starts == 1 && waits == 2);
+});
+Check("Steam shutdown and restart errors remain visible and prevent unsafe imports", () => {
+    int writes = 0;
+    Throws(() => SteamImport.Run(true, () => true, () => throw new IOException("shutdown failed"), () => {}, () => writes++).GetAwaiter().GetResult());
+    Assert(writes == 0);
+    bool running = true;
+    try {
+        SteamImport.Run(true, () => running, () => running = false, () => throw new IOException("restart failed"), () => throw new IOException("write failed")).GetAwaiter().GetResult();
+        throw new Exception("Expected recovery failure");
+    } catch (IOException e) { Assert(e.Message.Contains("Open Steam manually") && e.InnerException is AggregateException); }
+});
+Check("profile names prefer persona and keep numeric identities and duplicate-name disambiguation", () => {
+    var profiles = SteamProfiles.Resolve(["1", "2", "3", "4"], """
+        // Locally cached Steam accounts
+        "users" {
+          "76561197960265729" { "AccountName" "login-one" "PersonaName" "Café \"Player\"" }
+          "76561197960265730" { "PersonaName" "Café \"Player\"" }
+          "76561197960265731" { "PersonaName" " " "AccountName" "fallback" }
+          "76561197960265737" { "PersonaName" "stale profile" }
+        }
+        """);
+    Assert(profiles.Count == 4 && profiles[0].Id == "1");
+    Assert(profiles[0].ToString() == "Café \"Player\" (1)" && profiles[1].ToString().EndsWith("(2)"));
+    Assert(profiles[2].ToString() == "fallback (3)" && profiles[3].ToString() == "4");
+});
+Check("missing malformed oversized and ambiguous profile metadata falls back safely", () => {
+    foreach (var text in new string?[] { null, "", "users {", "users { a }", "users { \"x", new string(' ', 1024 * 1024 + 1),
+        "users { 76561197960265729 { PersonaName one PersonaName two } }", "users {} users {}" })
+        Assert(SteamProfiles.Resolve(["1"], text).Single().ToString() == "1");
+    Assert(SteamProfiles.Resolve(["1"], "users { 76561197960265729 { PersonaName one } 76561197960265729 { PersonaName two } }").Single().Name == null);
+    Assert(SteamProfiles.Resolve(["1"], "users { 1 { PersonaName wrong } }").Single().Name == null);
+});
+Check("profile loading handles absent locked and invalid UTF8 metadata without losing folders", () => {
+    string dir = Path.Combine(Path.GetTempPath(), "gp2s-profiles-" + Guid.NewGuid());
+    try {
+        Directory.CreateDirectory(Path.Combine(dir,"userdata","1")); Directory.CreateDirectory(Path.Combine(dir,"userdata","not-an-id"));
+        Directory.CreateDirectory(Path.Combine(dir,"config")); string path = Path.Combine(dir,"config","loginusers.vdf");
+        Assert(SteamProfiles.Load(dir).Single().Id == "1");
+        File.WriteAllText(path,"users { 76561197960265729 { PersonaName Player } }");
+        Assert(SteamProfiles.Load(dir).Single().Name == "Player");
+        using (var locked = new FileStream(path,FileMode.Open,FileAccess.ReadWrite,FileShare.None))
+            Assert(SteamProfiles.Load(dir).Single().ToString() == "1");
+        File.WriteAllBytes(path,[0xff,0xff,0xff]); Assert(SteamProfiles.Load(dir).Single().ToString() == "1");
+    } finally { Directory.Delete(dir,true); }
+});
 Console.WriteLine($"{passed} checks passed");
 if (args is ["--compare", var beforePath, var afterPath, var expectedId])
 {

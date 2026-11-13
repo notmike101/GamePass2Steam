@@ -12,7 +12,7 @@ To stop using GamePass2Steam, remove its managed shortcuts with Steam closed, ex
 
 ## Automatic backups
 
-The app changes only `<Steam>\userdata\<profile>\config\shortcuts.vdf`. Before changing an existing file it creates a sibling backup named `shortcuts.vdf.gp2s-<UTC timestamp>-<unique>.bak`. An unchanged import does not create another backup; a first-ever shortcut file has no previous file to back up. Backups are not automatically pruned.
+Shortcut changes affect `<Steam>\userdata\<profile>\config\shortcuts.vdf`. Before changing an existing file the app creates a sibling backup named `shortcuts.vdf.gp2s-<UTC timestamp>-<unique>.bak`. An unchanged import does not create another backup; a first-ever shortcut file has no previous file to back up. Backups are not automatically pruned. Optional [artwork](Artwork) is stored separately in `config/grid`; shortcut snapshots do not include image files.
 
 Writes use a flushed temporary file and atomic replacement. Malformed input and unsupported binary types are refused. Do not run another shortcut editor or restart Steam during a save: Steam offers no transactional shortcut API, so a final race with another writer cannot be eliminated completely.
 

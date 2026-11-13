@@ -9,6 +9,7 @@ GamePass2Steam is a C# Windows Forms application that adds registered Xbox/Micro
 - `src/GamePass2Steam.Core/`: binary VDF serialization, shortcut updates and file storage, game metadata parsing, and session state. Keep platform-independent logic here.
 - `src/GamePass2Steam/`: GUI and command-line entry points, Windows package discovery, application activation, and process/window inspection. `Discover.ps1` is embedded in the application.
 - `tests/GamePass2Steam.Tests/`: a console-based test runner for the core library. Run it with `dotnet run`; it is not a `dotnet test` project.
+- `tests/GamePass2Steam.UiTests/`: Windows Forms regression checks using mocked HTTP and isolated test dialogs. Run with `dotnet run --project tests/GamePass2Steam.UiTests -c Release`; packaging runs these alongside the core checks.
 - `scripts/package.ps1`: runs tests, publishes the Windows x64 app with its .NET runtime, and creates a ZIP and checksum under `dist/`.
 - `.github/workflows/windows.yml`: build-only CI for branches and PRs; `.github/workflows/release.yml`: releases after a reviewed `dev` to `main` merge.
 

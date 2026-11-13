@@ -8,6 +8,8 @@ $stage = Join-Path $output ('stage-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force $stage | Out-Null
 dotnet run --project (Join-Path $repo 'tests/GamePass2Steam.Tests') -c Release
 if ($LASTEXITCODE -ne 0) { throw 'Tests failed' }
+dotnet run --project (Join-Path $repo 'tests/GamePass2Steam.UiTests') -c Release
+if ($LASTEXITCODE -ne 0) { throw 'Windows UI tests failed' }
 dotnet publish (Join-Path $repo 'src/GamePass2Steam') -c Release -r win-x64 --self-contained true -o $stage -p:DebugType=None -p:DebugSymbols=false
 if ($LASTEXITCODE -ne 0) { throw 'Publish failed' }
 foreach ($name in @('README.md', 'AGENTS.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md')) { Copy-Item -LiteralPath (Join-Path $repo $name) -Destination $stage }
