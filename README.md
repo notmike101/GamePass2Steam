@@ -18,6 +18,8 @@ Steam must be fully closed before shortcuts can be changed. The app explains how
 
 ## Install and use
 
+The name filter updates after a brief typing pause (200 ms). Each update reads the current Steam shortcut file; imports and restores refresh immediately.
+
 1. Extract the entire `GamePass2Steam-0.1.0-win-x64.zip` into a **permanent folder**, for example `%LOCALAPPDATA%\Programs\GamePass2Steam`. Keep all files together. No Node.js, pnpm, .NET installation, SDK, administrator privileges or build tools are needed.
 2. Run `GamePass2Steam.exe`. Select the intended local Steam profile. The selector uses the locally cached Steam display name (or account name), followed by its numeric ID for disambiguation. Missing or unreadable metadata falls back to the ID. No network or API key is needed. The active profile is selected if Windows provides it; otherwise choose explicitly. Profile IDs match folders under Steam's `userdata` directory and remain the identifiers used by CLI commands.
 3. Check games in the Add column. If missing, enable **Include other registered apps**, or use **Find game folder** to match a folder to Windows registration. This fallback accepts a game directory or its Content folder and does not register or modify the game.

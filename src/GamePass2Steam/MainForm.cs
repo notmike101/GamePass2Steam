@@ -8,6 +8,7 @@ public sealed class MainForm : Form
 {
     private readonly ComboBox profiles = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 240, DropDownWidth = 480, AccessibleName = "Steam profile" };
     private readonly TextBox search = new() { PlaceholderText = "Filter games by name…", Width = 250, AccessibleName = "Filter games" };
+    private readonly System.Windows.Forms.Timer filterTimer = new() { Interval = 200 };
     private readonly CheckBox allApps = new() { Text = "Include other registered apps", AutoSize = true };
     private readonly CheckBox artwork = new() { Text = "Fill missing SteamGridDB artwork", AutoSize = true };
     private string? artworkKey;
@@ -43,7 +44,9 @@ public sealed class MainForm : Form
         AddButton("Artwork settings…", () => { artworkKey = ArtworkUi.Configure(this, artworkKey); return Task.CompletedTask; });
         AddButton("Open logs", () => { Directory.CreateDirectory(Log.DirectoryPath); Process.Start(new ProcessStartInfo(Log.DirectoryPath) { UseShellExecute = true }); return Task.CompletedTask; });
         layout.Controls.Add(actions); layout.Controls.Add(status); Controls.Add(layout);
-        search.TextChanged += (_, _) => TryPopulate(); allApps.CheckedChanged += (_, _) => TryPopulate(); profiles.SelectedIndexChanged += (_, _) => { if (!busy) TryPopulate(); };
+        search.TextChanged += (_, _) => { filterTimer.Stop(); filterTimer.Start(); }; allApps.CheckedChanged += (_, _) => TryPopulate(); profiles.SelectedIndexChanged += (_, _) => { if (!busy) TryPopulate(); };
+        filterTimer.Tick += (_, _) => { filterTimer.Stop(); TryPopulate(); };
+        Disposed += (_, _) => filterTimer.Dispose();
         Shown += async (_, _) => await Execute(Initialize);
         FormClosing += (_, e) => { if (importCancellation != null) { e.Cancel = true; if (!writingImport) importCancellation.Cancel(); status.Text = writingImport ? "Finishing shortcuts/artwork before reopening Steam. Please wait." : "Import canceled. Waiting for Steam shutdown recovery."; } };
     }
@@ -82,6 +85,7 @@ public sealed class MainForm : Form
     private void TryPopulate() { try { Populate(); } catch (Exception e) { status.Text = e.Message; } }
     private void Populate()
     {
+        filterTimer.Stop();
         var selected = grid.Rows.Cast<DataGridViewRow>().Where(r => r.Cells[0].Value is true).Select(r => ((Game)r.Tag!).Id).ToHashSet();
         var managed = profiles.SelectedItem != null ? SteamShortcuts.Entries(Store().Read()).Where(e => SteamShortcuts.ManagedId(e) != null).ToDictionary(e => SteamShortcuts.ManagedId(e)!, e => e.Text("appname") ?? "Missing game") : [];
         var display = games.Concat(managed.Where(p => games.All(g => g.Id != p.Key)).Select(p => new Game(p.Key, p.Value, "", "Not installed / refresh to repair", [], "Missing registration", false)));
