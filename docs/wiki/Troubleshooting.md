@@ -34,6 +34,8 @@ The release is unsigned. Get it from the [official repository releases](https://
 
 ## Reporting a useful issue
 
+Application logs last modified more than 30 days ago are pruned on the first log write of each process. Cleanup only considers the app's timestamp/PID `.log` filenames, skips reparse points, and ignores deletion failures. Copy logs you want to retain elsewhere. Shortcut backups are not pruned.
+
 Open an [issue](https://github.com/notmike101/GamePass2Steam/issues) with the app version, Windows version, game name, installation source, exact error, steps to reproduce, and whether Steam presence was correct during and after the session. Mention whether the game launches directly through Xbox.
 
 Use **Open logs** to find `%LOCALAPPDATA%\GamePass2Steam\logs`. Review logs before attaching: they may include local paths, app identities, PIDs and errors. Remove private information. Do not upload credentials, full Steam userdata, saves or account screenshots. The app has no telemetry and sends no automatic reports.
