@@ -43,6 +43,8 @@ Each downloaded file has a `.gp2s-source.json` sidecar recording its source and 
 
 ## Updates and moving the app
 
+An invalid SteamGridDB API response is reported as an artwork service error without exposing its response body or your key. Retry artwork after resolving the connection or service problem.
+
 Exit GamePass2Steam and any game launched through it. Extract a new release over the same application folder, keeping `GamePass2Steam.exe` at the same absolute path. The shortcut contains a stable AUMID, so package-version/path changes are resolved again at launch. If you move this app, close Steam and re-import the games from the new location. Do not run directly inside the ZIP or delete the folder after importing.
 
 ## Backup and recovery

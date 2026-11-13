@@ -83,8 +83,10 @@ public sealed class SteamGridDb(HttpClient http, string key)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://www.steamgriddb.com/api/v2/" + path);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
-        var document = JsonDocument.Parse(await Send(request, 2 * 1024 * 1024, cancellation, image: false));
-        if (!document.RootElement.TryGetProperty("success", out var success) || success.ValueKind != JsonValueKind.True)
+        JsonDocument document;
+        try { document = JsonDocument.Parse(await Send(request, 2 * 1024 * 1024, cancellation, image: false)); }
+        catch (JsonException) { throw new ArtworkUnavailableException("SteamGridDB returned an invalid response."); }
+        if (document.RootElement.ValueKind != JsonValueKind.Object || !document.RootElement.TryGetProperty("success", out var success) || success.ValueKind != JsonValueKind.True)
         { document.Dispose(); throw new ArtworkUnavailableException("SteamGridDB returned an unsuccessful response."); }
         return document;
     }
