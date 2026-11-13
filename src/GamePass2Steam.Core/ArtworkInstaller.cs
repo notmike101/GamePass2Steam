@@ -14,7 +14,7 @@ public sealed class ArtworkInstaller(SteamGridDb api, Func<bool> steamRunning, A
     private static (uint AppId, string? Icon) Shortcut(ShortcutStore store, string id)
     {
         var entries = SteamShortcuts.Entries(store.Read());
-        var entry = entries.Single(e => SteamShortcuts.ManagedId(e) == id);
+        var entry = entries.Single(e => string.Equals(SteamShortcuts.ManagedId(e), id, StringComparison.OrdinalIgnoreCase));
         var node = entry.Children!.Single(n => n.Name.Equals("appid", StringComparison.OrdinalIgnoreCase));
         if (node.Type != 2 || node.Data?.Length != 4) throw new InvalidDataException("Shortcut has no usable AppID.");
         uint appId = BitConverter.ToUInt32(node.Data);
@@ -39,7 +39,7 @@ public sealed class ArtworkInstaller(SteamGridDb api, Func<bool> steamRunning, A
             string path = Path.Combine(store.ConfigDirectory, "grid", shortcut.AppId + ".gp2s-match.json");
             if (!File.Exists(path) || new FileInfo(path).Length > 8192) return null;
             var saved = JsonSerializer.Deserialize<SavedMatch>(File.ReadAllText(path));
-            return saved?.Identity == id && saved.Game is { Id: > 0, Name: { Length: > 0 and <= 500 } } ? saved.Game : null;
+            return saved != null && string.Equals(saved.Identity, id, StringComparison.OrdinalIgnoreCase) && saved.Game is { Id: > 0, Name: { Length: > 0 and <= 500 } } ? saved.Game : null;
         }
         catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { return null; }
     }

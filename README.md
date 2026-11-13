@@ -45,6 +45,8 @@ Each downloaded file has a `.gp2s-source.json` sidecar recording its source and 
 
 ## Updates and moving the app
 
+Registered application and package identities are matched without regard to case. Re-importing a differently cased identity preserves the existing shortcut's AppID, ownership tag and user metadata.
+
 Launch resolution reads metadata only for the requested registered application. Refresh and `--discover` still scan all registered apps.
 
 An invalid SteamGridDB API response is reported as an artwork service error without exposing its response body or your key. Retry artwork after resolving the connection or service problem.

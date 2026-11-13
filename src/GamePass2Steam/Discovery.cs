@@ -36,7 +36,7 @@ public static class Discovery
                 GameMetadata.ValidateIdentity(app.Id);
                 var manifest = GameMetadata.Parse(app.Manifest);
                 string appId = app.Id.Split('!')[1];
-                var application = manifest.Descendants().FirstOrDefault(e => e.Name.LocalName == "Application" && (string?)e.Attribute("Id") == appId);
+                var application = manifest.Descendants().FirstOrDefault(e => e.Name.LocalName == "Application" && string.Equals((string?)e.Attribute("Id"), appId, StringComparison.OrdinalIgnoreCase));
                 if (application == null) continue;
                 bool gdk = app.Config != null;
                 List<string> executables = gdk ? GameMetadata.Executables(app.Config!, appId, app.InstallPath) : [];
@@ -50,7 +50,7 @@ public static class Discovery
             }
             catch (Exception e) when (e is IOException or ArgumentException) { registrations.Warnings.Add(app.Name + ": " + e.Message); }
         }
-        return new(games.DistinctBy(g => g.Id).OrderBy(g => g.Name).ToList(), registrations.Warnings);
+        return new(games.DistinctBy(g => g.Id, StringComparer.OrdinalIgnoreCase).OrderBy(g => g.Name).ToList(), registrations.Warnings);
     }
 
     public static List<Game> MatchFolder(string folder, IEnumerable<Game> games)

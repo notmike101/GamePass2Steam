@@ -31,6 +31,6 @@ public static partial class GameMetadata
         return path;
     }
     public static List<string> Executables(string xml, string applicationId, string root) => Parse(xml).Descendants()
-        .Where(e => e.Name.LocalName == "Executable" && (string?)e.Attribute("Id") == applicationId && !string.Equals((string?)e.Attribute("IsDevOnly"), "true", StringComparison.OrdinalIgnoreCase))
+        .Where(e => e.Name.LocalName == "Executable" && string.Equals((string?)e.Attribute("Id"), applicationId, StringComparison.OrdinalIgnoreCase) && !string.Equals((string?)e.Attribute("IsDevOnly"), "true", StringComparison.OrdinalIgnoreCase))
         .Select(e => ContainedPath(root, (string?)e.Attribute("Name") ?? throw new InvalidDataException("Missing executable name."))).ToList();
 }

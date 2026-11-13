@@ -20,6 +20,7 @@ internal static class Program
     private static int Main()
     {
         ApplicationConfiguration.Initialize();
+        IdentityChecks.Run();
         FilterChecks.Run();
         LogChecks.Run();
         ProcessChecks.Run();
@@ -61,7 +62,7 @@ internal static class Program
             { Console.Error.WriteLine(failure?.ToString() ?? "FAIL chooser did not stop cleanly after one request"); return 1; }
             Console.WriteLine($"PASS chooser propagates HTTP {(int)status} from {(query == "123" ? "ID" : "title")} search and closes");
         }
-        Console.WriteLine("10 Windows UI/native/log checks passed");
+        Console.WriteLine("11 Windows UI/native/log checks passed");
         return 0;
     }
 

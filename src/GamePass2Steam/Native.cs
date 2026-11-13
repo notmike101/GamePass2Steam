@@ -76,7 +76,7 @@ internal static class Native
                     // A versioned WindowsApps alias and the custom Content path can name the same executable.
                     if (!game.Executables.Any(e => Path.GetFileName(e).Equals(Path.GetFileName(value), StringComparison.OrdinalIgnoreCase))) continue;
                     var family = new StringBuilder(1024); uint count = (uint)family.Capacity;
-                    exact = GetPackageFamilyName(handle, ref count, family) == 0 && family.ToString() == game.Family;
+                    exact = GetPackageFamilyName(handle, ref count, family) == 0 && family.ToString().Equals(game.Family, StringComparison.OrdinalIgnoreCase);
                     if (!exact) exact = game.Executables.Contains(CanonicalPath(value), StringComparer.OrdinalIgnoreCase);
                 }
                 if (SessionTracker.IsRunning(game.Kind, exact, visible.Contains(process.Id))) matches.Add(process.Id);

@@ -26,10 +26,10 @@ public static class SteamShortcuts
     {
         if (!Path.IsPathFullyQualified(launcher) || launcher.IndexOfAny(['"', '\0', '\r', '\n']) >= 0) throw new InvalidDataException("Launcher must be an absolute executable path without quotes.");
         var entries = Entries(root);
-        foreach (var game in games.DistinctBy(g => g.Id))
+        foreach (var game in games.DistinctBy(g => g.Id, StringComparer.OrdinalIgnoreCase))
         {
             GameMetadata.ValidateIdentity(game.Id);
-            var matches = entries.Where(e => ManagedId(e) == game.Id).ToList();
+            var matches = entries.Where(e => string.Equals(ManagedId(e), game.Id, StringComparison.OrdinalIgnoreCase)).ToList();
             if (matches.Count > 1) throw new InvalidDataException("Multiple managed shortcuts have the same identity. Remove duplicates in Steam before retrying.");
             if (remove) { foreach (var match in matches) entries.Remove(match); continue; }
             VdfNode entry;
@@ -67,7 +67,7 @@ public sealed class ShortcutStore(string path, Func<bool> steamRunning)
     public string ConfigDirectory => Path.GetDirectoryName(Path.GetFullPath(path))!;
     public string? FillIcon(string id, uint appId, string iconPath) => Change(root =>
     {
-        var entry = SteamShortcuts.Entries(root).Single(e => SteamShortcuts.ManagedId(e) == id);
+        var entry = SteamShortcuts.Entries(root).Single(e => string.Equals(SteamShortcuts.ManagedId(e), id, StringComparison.OrdinalIgnoreCase));
         if (!Path.IsPathFullyQualified(iconPath) || !File.Exists(iconPath)) throw new InvalidDataException("Icon file is unavailable.");
         var storedId = entry.Children!.Single(n => n.Name.Equals("appid", StringComparison.OrdinalIgnoreCase));
         if (storedId.Type != 2 || BitConverter.ToUInt32(storedId.Data!) != appId) throw new InvalidDataException("Shortcut changed before icon update.");
