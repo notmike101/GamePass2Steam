@@ -15,7 +15,7 @@ public static class Launcher
         if (!owned) throw new IOException("This game already has a GamePass2Steam launcher session.");
         // Mutex ownership is thread-affine; keep the owner alive until the process exits, without releasing on an async continuation.
         Log.Write("Resolving " + id);
-        var result = await Discovery.Scan();
+        var result = await Discovery.Scan(id);
         var game = result.Games.SingleOrDefault(g => g.Id == id) ?? throw new IOException("Game is no longer registered for this Windows user. Repair it in Xbox, then refresh and re-import.");
         if (Native.GameProcesses(game).Count != 0) throw new IOException("The game is already running. Exit it before launching from Steam so Steam can track this session.");
         uint bootstrap = Native.Activate(id);
