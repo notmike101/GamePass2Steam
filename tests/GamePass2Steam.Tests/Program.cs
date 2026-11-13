@@ -33,6 +33,17 @@ Check("preserve unrelated scalar types and nested metadata", () => {
     SteamShortcuts.Update(root, [game], launcher, false);
     Assert(BinaryVdf.Write([root[0].Children![0]]).SequenceEqual(before));
 });
+Check("terminated VDF fields handle long UTF8 empty and unterminated strings", () => {
+    string longName = string.Concat(Enumerable.Repeat("Café", 2048));
+    var bytes = BinaryVdf.Write([VdfNode.String(longName, longName), VdfNode.String("", "")]);
+    var parsed = BinaryVdf.Read(bytes);
+    Assert(parsed[0].Name == longName && Encoding.UTF8.GetString(parsed[0].Data!) == longName);
+    Assert(parsed[1].Name == "" && parsed[1].Data!.Length == 0);
+    Assert(BinaryVdf.Write(parsed).SequenceEqual(bytes));
+    Throws(() => BinaryVdf.Read([1, (byte)'a']));
+    Throws(() => BinaryVdf.Read([1, (byte)'a', 0, (byte)'b']));
+    Throws(() => BinaryVdf.Read([1, 0xff, 0, 0, 8]));
+});
 Check("repeat import updates location without duplication or erasing user fields", () => {
     var root = BinaryVdf.Read(fixture);
     SteamShortcuts.Update(root, [game], launcher, false);
