@@ -29,4 +29,6 @@ If a malformed current file prevents the app from restoring, close Steam, manual
 
 Application identities are compared case-insensitively. A registration casing change updates the same managed shortcut and preserves its stored AppID and user metadata. Ambiguous duplicate ownership is still refused.
 
+The name filter updates after a 200 ms typing pause and reads the current shortcuts file on each update. Imports and restores refresh immediately.
+
 Shortcut field names, including the root `shortcuts` name, are accepted case-insensitively and retain their original spelling when saved.

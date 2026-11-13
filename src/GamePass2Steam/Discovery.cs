@@ -12,12 +12,14 @@ internal sealed record RegisteredApp(string Id, string Name, string Family, stri
 internal sealed record RegistrationResult(List<RegisteredApp> Items, List<string> Warnings);
 public static class Discovery
 {
-    public static async Task<DiscoveryResult> Scan()
+    public static async Task<DiscoveryResult> Scan(string? id = null)
     {
+        if (id != null) GameMetadata.ValidateIdentity(id);
         using var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("GamePass2Steam.Discover.ps1")!;
         using var reader = new StreamReader(resource);
         var start = new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"WindowsPowerShell\v1.0\powershell.exe"))
         { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8 };
+        start.Environment["GP2S_DISCOVERY_ID"] = id ?? "";
         foreach (string arg in new[] { "-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", Convert.ToBase64String(Encoding.Unicode.GetBytes(await reader.ReadToEndAsync())) }) start.ArgumentList.Add(arg);
         using var process = Process.Start(start) ?? throw new IOException("Windows package discovery could not start.");
         var output = process.StandardOutput.ReadToEndAsync(); var errors = process.StandardError.ReadToEndAsync();
