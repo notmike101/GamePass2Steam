@@ -59,6 +59,7 @@ Steam has no supported transactional API for non-Steam shortcuts. Do not start S
 
 ## Compatibility and troubleshooting
 
+Registrations with a missing display name appear under their application identity and produce a discovery warning.
 If filtering encounters an unreadable or malformed shortcuts file, the status line shows the error. Repair the file or release its lock, then retry filtering.
 
 - **GDK / packaged Win32:** MicrosoftGame.config identifies the real game executable; Windows registration launches its normal bootstrapper. Custom drives/folders work through registration rather than a hardcoded XboxGames scan. Development-only executables are excluded.
