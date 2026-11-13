@@ -42,3 +42,7 @@ The final release binaries (informational version `0.1.0+181908f`) were installe
 ## Limits
 
 No real UWP game, second GDK title, external publisher launcher, protected/elevated game, Windows 10 machine, ARM64 machine or clean machine without an SDK was tested. Runtime files are bundled, and CI sets DOTNET_ROOT to a nonexistent directory for its packaged smoke test. No extended gameplay, save/load, game update/relocation, controller, overlay or streaming test was performed. The two-minute menu session establishes the first acceptance case, not broad catalog compatibility.
+
+## Audit polling regression (2026-11-13)
+
+The launcher now enumerates candidates by distinct declared executable basenames and reuses one 32K path buffer per poll. Windows native regression checks verified case-insensitive matching of the test executable, duplicate-name suppression, rejection of the same filename in a wrong directory, detection of a real child process, and disappearance after its normal exit. All seven UI/native checks passed. Full game activation, UWP windows, Steam presence, and allocation throughput have not been measured for this change; prior game acceptance results do not validate it.
