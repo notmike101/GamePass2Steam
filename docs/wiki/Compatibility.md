@@ -26,3 +26,5 @@ Dependencies, resource-only packages, entries without Start-menu registration or
 External-launcher-only EA/Ubisoft installations, loose unregistered Win32 executables, ARM64/x86 builds, protected/elevated processes that cannot be inspected, and undeclared differently named executable handoffs are unsupported. Use the official launcher for those cases.
 
 Windows 10, additional game titles and real UWP gameplay have not been integration-tested. Steam Overlay, Steam Input and Remote Play are separate capabilities and are not promised or tested. GamePass2Steam does not inject an overlay, translate controller input, bypass DRM or install games.
+
+Launch resolution reads metadata only for the requested registered application. Refresh and full discovery still scan all registered apps.

@@ -45,6 +45,8 @@ Each downloaded file has a `.gp2s-source.json` sidecar recording its source and 
 
 ## Updates and moving the app
 
+Launch resolution reads metadata only for the requested registered application. Refresh and `--discover` still scan all registered apps.
+
 An invalid SteamGridDB API response is reported as an artwork service error without exposing its response body or your key. Retry artwork after resolving the connection or service problem.
 
 Exit GamePass2Steam and any game launched through it. Extract a new release over the same application folder, keeping `GamePass2Steam.exe` at the same absolute path. The shortcut contains a stable AUMID, so package-version/path changes are resolved again at launch. If you move this app, close Steam and re-import the games from the new location. Do not run directly inside the ZIP or delete the folder after importing.
@@ -60,6 +62,8 @@ To restore, exit Steam, choose the same profile, select **Restore backup**, and 
 Steam has no supported transactional API for non-Steam shortcuts. Do not start Steam or another shortcut editor while saving. The app checks Steam both before and just before replacement, detects concurrent file changes, and serializes its own writers; this cannot prevent an unrelated process from writing in the final check/replace interval.
 
 ## Compatibility and troubleshooting
+
+On the first log write in each app process, matching application logs last modified more than 30 days ago are pruned on a best-effort basis. Unrelated files, reparse points and shortcut backups are excluded.
 
 Registrations with a missing display name appear under their application identity and produce a discovery warning.
 If filtering encounters an unreadable or malformed shortcuts file, the status line shows the error. Repair the file or release its lock, then retry filtering.

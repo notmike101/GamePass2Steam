@@ -1,3 +1,4 @@
+param([string]$ApplicationId = $env:GP2S_DISCOVERY_ID)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $start = @{}
@@ -7,7 +8,7 @@ $warnings = [System.Collections.Generic.List[string]]::new()
 foreach ($package in Get-AppxPackage) {
     if ($package.IsFramework -or $package.IsResourcePackage -or !$package.InstallLocation) { continue }
     $prefix = $package.PackageFamilyName + '!'
-    $ids = @($start.Keys | Where-Object { $_.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase) })
+    $ids = @($start.Keys | Where-Object { (!$ApplicationId -or $_ -eq $ApplicationId) -and $_.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase) })
     if (!$ids.Count) { continue }
     try {
         $manifest = [IO.File]::ReadAllText((Join-Path $package.InstallLocation 'AppxManifest.xml'))
